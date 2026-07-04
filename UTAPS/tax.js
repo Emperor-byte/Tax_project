@@ -1,13 +1,4 @@
-/* ════════════════════════════════════════════════════════
-   TaxUmuahia · UTAPS — Frontend JavaScript
-   Wired to live Express backend at /api
-   ════════════════════════════════════════════════════════ */
-
 'use strict';
-
-/* ════════════════════════════════════════
-   API CLIENT
-   ════════════════════════════════════════ */
 
 const API = '/api';
 
@@ -20,12 +11,10 @@ async function apiRequest(method, endpoint, body = null, requiresAuth = false) {
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(API + endpoint, opts);
-
-  // Check if response is JSON
   const contentType = res.headers.get('content-type');
   if (!contentType || !contentType.includes('application/json')) {
     const text = await res.text();
-    throw new Error(text || `Server error: ${res.status} ${res.statusText}`);
+    throw new Error(text || `Server error: ${res.status}`);
   }
 
   const data = await res.json();
@@ -36,26 +25,18 @@ async function apiRequest(method, endpoint, body = null, requiresAuth = false) {
 const get  = (ep, auth = false) => apiRequest('GET', ep, null, auth);
 const post = (ep, body, auth = false) => apiRequest('POST', ep, body, auth);
 
-/* ════════════════════════════════════════
-   AUTH STATE
-   ════════════════════════════════════════ */
-
 let currentUser = null;
-
 function isLoggedIn() { return !!localStorage.getItem('utaps_token'); }
-
 function saveSession(data) {
   localStorage.setItem('utaps_token', data.token);
   localStorage.setItem('utaps_user', JSON.stringify(data.user));
   currentUser = data.user;
 }
-
 function clearSession() {
   localStorage.removeItem('utaps_token');
   localStorage.removeItem('utaps_user');
   currentUser = null;
 }
-
 function loadSession() {
   const stored = localStorage.getItem('utaps_user');
   if (stored) {
@@ -66,6 +47,8 @@ function loadSession() {
 function updateNavForAuth() {
   const loginBtns  = document.querySelectorAll('.btn-nav-login');
   const signupBtns = document.querySelectorAll('.btn-nav-signup');
+  const protectedLinks = document.querySelectorAll('.protected-link');
+  const adminLinks = document.querySelectorAll('.admin-link');
 
   if (isLoggedIn() && currentUser) {
     loginBtns.forEach(loginBtn => {
@@ -82,6 +65,8 @@ function updateNavForAuth() {
         showSection('home');
       };
     });
+    protectedLinks.forEach(link => link.style.display = 'flex');
+    adminLinks.forEach(link => link.style.display = currentUser.role === 'admin' ? 'flex' : 'none');
   } else {
     loginBtns.forEach(loginBtn => {
       loginBtn.textContent = 'Sign in';
@@ -93,19 +78,25 @@ function updateNavForAuth() {
       signupBtn.style.color = '';
       signupBtn.onclick = () => showSection('register');
     });
+    protectedLinks.forEach(link => link.style.display = 'none');
+    adminLinks.forEach(link => link.style.display = 'none');
   }
 }
 
-/* ════════════════════════════════════════
-   SECTION ROUTING
-   ════════════════════════════════════════ */
-
-const ALL_SECTIONS = [
-  'home','login','register','enterprise',
-  'legal','pay','status','analytics','feedback','forms'
-];
+const ALL_SECTIONS = ['home','login','register','enterprise','legal','pay','status','analytics','feedback','forms'];
 
 function showSection(name) {
+  const protectedSections = ['enterprise','legal','pay','status','analytics','feedback','forms'];
+  if (!isLoggedIn() && protectedSections.includes(name)) {
+    showToast('Please sign in or register to access this page.', 'error');
+    name = 'login';
+  }
+
+  if (name === 'analytics' && currentUser?.role !== 'admin') {
+    showToast('Admin access required.', 'error');
+    name = 'home';
+  }
+
   ALL_SECTIONS.forEach(id => {
     const el = document.getElementById('section-' + id);
     if (el) el.classList.toggle('active', id === name);
@@ -115,7 +106,7 @@ function showSection(name) {
     link.classList.toggle('active', link.getAttribute('data-section') === name);
   });
 
-  if (name === 'analytics') setTimeout(initCharts, 80);
+  if (name === 'analytics') setTimeout(loadAdminDashboard, 80);
   if (name === 'feedback')  loadFeedbackSummary();
   if (name === 'status' && isLoggedIn()) loadMyStatus();
 
@@ -123,20 +114,12 @@ function showSection(name) {
   return false;
 }
 
-/* ════════════════════════════════════════
-   MOBILE NAV
-   ════════════════════════════════════════ */
-
 function toggleMobileNav() {
   const nav = document.getElementById('main-nav');
   const btn = document.getElementById('hamburger');
   const open = nav.classList.toggle('mobile-open');
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
-
-/* ════════════════════════════════════════
-   TAB SWITCHING
-   ════════════════════════════════════════ */
 
 function switchTab(el, id) {
   const tabsEl = el.closest('.tabs');
@@ -153,22 +136,13 @@ function handleCard(event, section) {
   if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSection(section); }
 }
 
-/* ════════════════════════════════════════
-   LOGIN
-   ════════════════════════════════════════ */
-
 async function handleLogin() {
   const tin    = document.getElementById('login-tin')?.value?.trim();
   const pass   = document.getElementById('login-pass')?.value;
   const errEl  = document.getElementById('login-error');
-
   if (errEl) errEl.hidden = true;
 
-  if (!tin || !pass) {
-    showError(errEl, 'Please enter your TIN / email and password.');
-    return;
-  }
-
+  if (!tin || !pass) { showError(errEl, 'Please enter your TIN / email and password.'); return; }
   const btn = document.querySelector('.auth-submit');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Signing in…'; }
 
@@ -177,7 +151,7 @@ async function handleLogin() {
     saveSession(data);
     updateNavForAuth();
     showToast(data.message, 'success');
-    showSection('home');
+    showSection(currentUser.role === 'admin' ? 'analytics' : 'home');
   } catch (err) {
     showError(errEl, err.message);
   } finally {
@@ -194,12 +168,7 @@ function togglePassword(inputId, btn) {
   if (icon) icon.className = isText ? 'ti ti-eye' : 'ti ti-eye-off';
 }
 
-/* ════════════════════════════════════════
-   REGISTRATION (3-step)
-   ════════════════════════════════════════ */
-
 let currentRegStep = 1;
-
 function regNext(step) {
   if (step > currentRegStep && !validateRegStep(currentRegStep)) return;
   currentRegStep = step;
@@ -222,10 +191,13 @@ function validateRegStep(step) {
     if (!document.getElementById('reg-bizname')?.value.trim()) { alert('Business name is required.'); return false; }
     if (!document.getElementById('reg-tin')?.value.trim())     { alert('TIN is required.'); return false; }
     if (!document.getElementById('reg-entity')?.value)         { alert('Please select an entity type.'); return false; }
+    if (!document.getElementById('reg-location')?.value)       { alert('Please select a location in Umuahia.'); return false; }
     if (!document.getElementById('reg-address')?.value.trim()) { alert('Business address is required.'); return false; }
   }
   if (step === 2) {
-    if (!document.getElementById('reg-email')?.value.trim())   { alert('Email is required.'); return false; }
+    const email = document.getElementById('reg-email')?.value.trim();
+    if (!email) { alert('Gmail address is required.'); return false; }
+    if (!email.toLowerCase().endsWith('@gmail.com')) { alert('A Gmail address is required for registration.'); return false; }
     if (!document.getElementById('reg-phone')?.value.trim())   { alert('Phone number is required.'); return false; }
     const p = document.getElementById('reg-pass')?.value;
     const p2 = document.getElementById('reg-pass2')?.value;
@@ -258,6 +230,7 @@ async function handleRegister() {
     bizName:       document.getElementById('reg-bizname')?.value?.trim(),
     tin:           document.getElementById('reg-tin')?.value?.trim(),
     entityType:    document.getElementById('reg-entity')?.value,
+    location:      document.getElementById('reg-location')?.value,
     rcNumber:      document.getElementById('reg-rc')?.value?.trim(),
     address:       document.getElementById('reg-address')?.value?.trim(),
     annualTurnover:document.getElementById('reg-turnover')?.value,
@@ -288,20 +261,12 @@ async function handleRegister() {
   }
 }
 
-/* ════════════════════════════════════════
-   ENTERPRISE — COMPLIANCE RESULT
-   ════════════════════════════════════════ */
-
 function showComplianceResult() {
   const panel = document.getElementById('compliance-result');
   if (!panel) return;
   panel.hidden = false;
   panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
-
-/* ════════════════════════════════════════
-   PAY PAGE
-   ════════════════════════════════════════ */
 
 function updatePayTotal() {
   const select  = document.getElementById('pay-type');
@@ -342,16 +307,10 @@ async function submitPayment() {
   }
 }
 
-/* ════════════════════════════════════════
-   STATUS REPORT — live from API
-   ════════════════════════════════════════ */
-
 async function loadStatusReport() {
   const input   = document.getElementById('status-search');
-  const typeEl  = document.getElementById('status-type');
   const report  = document.getElementById('status-report');
   const loading = document.getElementById('status-loading');
-
   const tin = input?.value?.trim();
   if (!tin) { showToast('Please enter a TIN or business name.', 'error'); return; }
 
@@ -373,9 +332,7 @@ async function loadMyStatus() {
   if (!isLoggedIn()) return;
   const report  = document.getElementById('status-report');
   const loading = document.getElementById('status-loading');
-
   if (loading) loading.hidden = false;
-
   try {
     const data = await get('/status/me/report', true);
     renderStatusReport(data);
@@ -389,8 +346,6 @@ async function loadMyStatus() {
 
 function renderStatusReport(data) {
   const { entity, overallStatus, payments, notices, summary } = data;
-
-  // Entity header
   const nameEl   = document.getElementById('sec-entity-name');
   const infoEl   = document.getElementById('sec-entity-info');
   const badgeEl  = document.getElementById('sec-overall-badge');
@@ -402,20 +357,18 @@ function renderStatusReport(data) {
     badgeEl.innerHTML = `<span class="status-pill ${compliant ? 'pill-green' : 'pill-red'}">${overallStatus}</span>`;
   }
 
-  // Summary stats
   const sPaid = document.getElementById('sec-total-paid');
   const sOut  = document.getElementById('sec-outstanding');
   if (sPaid) sPaid.textContent = '₦' + (summary.totalPaid || 0).toLocaleString('en-NG');
   if (sOut)  sOut.textContent  = '₦' + (summary.totalOutstanding || 0).toLocaleString('en-NG');
 
-  // Payments table
   const tbody = document.getElementById('status-table-body');
   if (tbody && payments) {
     tbody.innerHTML = payments.map(p => {
       const statusClass = p.status === 'paid' ? 'pill-green' : p.status === 'overdue' ? 'pill-red' : 'pill-amber';
       const statusLabel = p.status === 'paid' ? '✓ Paid' : p.status === 'overdue' ? '⚠ Overdue' : p.status === 'due' ? '⏰ Due soon' : 'Upcoming';
       const action = p.status === 'paid'
-        ? `<button class="btn-tbl" onclick="viewReceipt(${p.id})">Receipt</button>`
+        ? `<button class="btn-tbl" onclick="viewReceipt('${p._id}')">Receipt</button>`
         : `<button class="btn-tbl btn-tbl-pay" onclick="showSection('pay')">Pay now</button>`;
       return `<div class="status-table-row ${p.status !== 'paid' ? 'row-warn' : ''}">
         <span>${p.taxType}</span>
@@ -428,7 +381,6 @@ function renderStatusReport(data) {
     }).join('');
   }
 
-  // Penalty notice — show only if non-compliant
   const penaltyEl = document.getElementById('penalty-notice-block');
   if (penaltyEl) {
     if (overallStatus !== 'Compliant' && notices?.length) {
@@ -455,13 +407,9 @@ async function viewReceipt(paymentId) {
   }
 }
 
-/* ════════════════════════════════════════
-   FEEDBACK — wired to API
-   ════════════════════════════════════════ */
-
-const RATING_LABELS = { 1:'Poor', 2:'Below average', 3:'Average', 4:'Good', 5:'Excellent!' };
 let currentRating = 0;
 const miniRatings = {};
+const RATING_LABELS = { 1:'Poor', 2:'Below average', 3:'Average', 4:'Good', 5:'Excellent!' };
 
 function setRating(val) {
   currentRating = val;
@@ -505,10 +453,9 @@ async function submitFeedback() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Submitting…'; }
 
   try {
-    const data = await post('/feedback', body);
+    const data = await post('/feedback', body, true);
     if (successEl) { successEl.hidden = false; successEl.innerHTML = `<i class="ti ti-circle-check"></i> ${data.message}`; }
     showToast('Feedback submitted!', 'success');
-    loadFeedbackSummary();
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -517,150 +464,143 @@ async function submitFeedback() {
 }
 
 async function loadFeedbackSummary() {
+  // Existing feedback logic if needed or clear
+}
+
+/* ════════════════════════════════════════
+   ADMIN DASHBOARD LOGIC
+   ════════════════════════════════════════ */
+async function loadAdminDashboard() {
+  if (!isLoggedIn() || currentUser.role !== 'admin') return;
+
   try {
-    const data = await get('/feedback');
-    const { count, averageRating, distribution, feedback } = data;
+    const data = await get('/admin/dashboard', true);
+    
+    // Summary Cards
+    document.getElementById('admin-stat-reg').textContent = data.registeredCount;
+    document.getElementById('admin-stat-paid').textContent = '₦' + (data.totalPaid / 1e6 || 0).toFixed(1) + 'M';
+    document.getElementById('admin-stat-out').textContent = '₦' + (data.outstandingLiabilities / 1e6 || 0).toFixed(1) + 'M';
 
-    const avgEl = document.getElementById('fb-avg-score');
-    const cntEl = document.getElementById('fb-count');
-    if (avgEl) avgEl.textContent = averageRating.toFixed(1);
-    if (cntEl) cntEl.textContent = `Based on ${count} review${count !== 1 ? 's' : ''}`;
+    // Defaulters Table
+    const defTbody = document.getElementById('admin-defaulters-list');
+    if (data.debtorProfiles.length === 0) {
+      defTbody.innerHTML = '<div style="padding:1.5rem;text-align:center;">No defaulters found.</div>';
+    } else {
+      defTbody.innerHTML = data.debtorProfiles.map(dp => `
+        <div class="status-table-row row-warn">
+          <span>${dp.user?.bizName || 'Unknown'}</span>
+          <span>${dp.user?.tin || 'Unknown'}</span>
+          <span>${dp.payment.taxType}</span>
+          <span>${dp.deadline || 'Past Due'}</span>
+          <span style="color:#dc2626;font-weight:bold;">₦${(dp.payment.amount||0).toLocaleString()}</span>
+          <span class="status-pill pill-red">Overdue</span>
+        </div>
+      `).join('');
+    }
 
-    // Rating bars
-    [1,2,3,4,5].forEach(n => {
-      const bar = document.getElementById(`rb-fill-${n}`);
-      const pct = document.getElementById(`rb-pct-${n}`);
-      if (bar) bar.style.width = (distribution[n] || 0) + '%';
-      if (pct) pct.textContent = (distribution[n] || 0) + '%';
-    });
+    // Enterprises Table
+    const entTbody = document.getElementById('admin-enterprise-list');
+    if (data.registeredEnterprises.length === 0) {
+      entTbody.innerHTML = '<div style="padding:1.5rem;text-align:center;">No enterprises registered.</div>';
+    } else {
+      entTbody.innerHTML = data.registeredEnterprises.map(e => `
+        <div class="status-table-row">
+          <span>${e.bizName}</span>
+          <span>${e.tin}</span>
+          <span>${e.type}</span>
+          <span>${e.location || 'N/A'}</span>
+          <span class="status-pill ${e.status === 'active' ? 'pill-green' : 'pill-amber'}">${e.status}</span>
+        </div>
+      `).join('');
+    }
 
-    // Recent reviews
-    const reviewsEl = document.getElementById('recent-reviews');
-    if (reviewsEl && feedback.length) {
-      reviewsEl.innerHTML = feedback.slice(0, 3).map(f => {
+    // Feedback List
+    const fbList = document.getElementById('admin-feedback-list');
+    if (data.feedbacks.length === 0) {
+      fbList.innerHTML = '<div style="padding:1.5rem;text-align:center;">No feedbacks submitted.</div>';
+    } else {
+      fbList.innerHTML = data.feedbacks.map(f => {
         const stars = '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating);
-        return `<div class="review-item">
-          <div class="review-header">
-            <span class="review-name">${f.entityName}</span>
-            <span class="mini-score">${stars}</span>
+        return `<div style="border:1px solid rgba(0,0,0,0.1); border-radius:8px; padding:1rem;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
+            <strong>${f.userId ? f.userId.bizName : f.entityName}</strong>
+            <span style="color:var(--amber)">${stars}</span>
           </div>
-          <p class="review-body">"${f.comment || 'No comment provided.'}"</p>
-          <span class="review-date">${f.createdAt?.slice(0,10) || ''}</span>
+          <p style="color:var(--text-muted);font-size:14px;">"${f.comment || 'No comment provided'}"</p>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:0.5rem;">${new Date(f.createdAt).toLocaleString()} | Category: ${f.category}</div>
         </div>`;
       }).join('');
     }
+
+    // Render Charts
+    buildAdminCharts(data);
+
   } catch (err) {
-    console.warn('Could not load feedback summary:', err.message);
+    showToast(err.message, 'error');
   }
 }
 
-/* ════════════════════════════════════════
-   ANALYTICS — CHART.JS (+ live API data)
-   ════════════════════════════════════════ */
+function buildAdminCharts(data) {
+  if (typeof Chart === 'undefined') return;
 
-let chartsInited = false;
-let barChartInst = null;
-let analyticsData = null;
+  const BASE  = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} };
+  const NAIRA = v => '₦' + v + 'M';
 
-async function initCharts() {
-  if (chartsInited) return;
-  if (typeof Chart === 'undefined') { console.warn('Chart.js not ready'); return; }
-
-  try {
-    analyticsData = await get('/analytics/summary');
-    updateStatCards(analyticsData);
-  } catch {
-    // Fall back to demo data silently
-    analyticsData = {
-      monthly: { labels:['Jan','Feb','Mar','Apr','May','Jun'], corporate:[48,52,56,62,64,68], paye:[42,44,51,54,56,60], levies:[28,28,32,32,32,35] },
-      entityBreakdown: { Companies:42, Banks:28, Hospitals:14, Schools:10, Plazas:6 },
-      trend12m: { labels:['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'], values:[110,115,118,122,130,125,118,124,139,148,152,163] }
-    };
+  // Monthly Revenue Chart
+  const revCtx = document.getElementById('adminRevenueChart');
+  if (revCtx) {
+    if (window.adminRevChart) window.adminRevChart.destroy();
+    window.adminRevChart = new Chart(revCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Jan','Feb','Mar','Apr','May','Jun'],
+        datasets: [{
+          label: 'Revenue',
+          data: [data.monthlyAnalytics.Jan||0, data.monthlyAnalytics.Feb||0, data.monthlyAnalytics.Mar||0, data.monthlyAnalytics.Apr||0, data.monthlyAnalytics.May||0, data.monthlyAnalytics.Jun||0].map(v => v/1e6),
+          backgroundColor: '#3266ad',
+          borderRadius: 4
+        }]
+      },
+      options: {...BASE, scales: { y: { ticks: { callback: NAIRA } } } }
+    });
   }
 
-  chartsInited = true;
-  buildBarChart('all');
-  buildPieChart();
-  buildTrendChart();
+  // Pie Chart (Entity breakdown)
+  const pieCtx = document.getElementById('adminPieChart');
+  if (pieCtx) {
+    if (window.adminPieChart) window.adminPieChart.destroy();
+    window.adminPieChart = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(data.entityBreakdown),
+        datasets: [{
+          data: Object.values(data.entityBreakdown),
+          backgroundColor: ['#0a2d5e','#3266ad','#85b7eb','#b5d4f4','#d8e9f8']
+        }]
+      },
+      options: {...BASE, cutout: '60%'}
+    });
+  }
+
+  // Trend Chart (dummy trend for demo as required, or real if we had 12 month data)
+  const trendCtx = document.getElementById('adminTrendChart');
+  if (trendCtx) {
+    if (window.adminTrendChart) window.adminTrendChart.destroy();
+    window.adminTrendChart = new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: ['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
+        datasets: [{
+          label: 'Collection Trend',
+          data: [110,115,118,122,130,125,118,124,139,148,152,163],
+          borderColor: '#0a2d5e', backgroundColor: 'rgba(10,45,94,.07)',
+          fill: true, tension: 0.3
+        }]
+      },
+      options: {...BASE, scales: { y: { ticks: { callback: NAIRA } } } }
+    });
+  }
 }
-
-function updateStatCards(d) {
-  const fmt = n => '₦' + Math.round(n/1e6) + 'M';
-  const s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  s('stat-ytd',   fmt(d.ytdTotal));
-  s('stat-june',  fmt(d.juneEstimate));
-  s('stat-reg',   d.registeredCount?.toLocaleString() || '4,812');
-  s('stat-out',   fmt(d.outstandingLiabilities));
-}
-
-const NAIRA = v => '₦' + v + 'M';
-const BASE  = { responsive:true, maintainAspectRatio:false, animation:{duration:350}, plugins:{legend:{display:false}} };
-
-function buildBarChart(filter) {
-  const canvas = document.getElementById('revenueChart');
-  if (!canvas) return;
-  if (barChartInst) { barChartInst.destroy(); barChartInst = null; }
-
-  const m = analyticsData?.monthly;
-  const allD = {
-    all:       { corp: m?.corporate||[48,52,56,62,64,68], paye: m?.paye||[42,44,51,54,56,60], levies: m?.levies||[28,28,32,32,32,35] },
-    corporate: { corp: m?.corporate||[48,52,56,62,64,68], paye:[0,0,0,0,0,0], levies:[0,0,0,0,0,0] },
-    paye:      { corp:[0,0,0,0,0,0], paye: m?.paye||[42,44,51,54,56,60], levies:[0,0,0,0,0,0] },
-    levies:    { corp:[0,0,0,0,0,0], paye:[0,0,0,0,0,0], levies: m?.levies||[28,28,32,32,32,35] }
-  };
-
-  const d = allD[filter] || allD.all;
-  barChartInst = new Chart(canvas, {
-    type:'bar',
-    data:{
-      labels: m?.labels || ['Jan','Feb','Mar','Apr','May','Jun'],
-      datasets:[
-        {label:'Corporate tax', data:d.corp,   backgroundColor:'#0a2d5e', borderRadius:3, borderSkipped:false},
-        {label:'PAYE',          data:d.paye,   backgroundColor:'#3266ad', borderRadius:3, borderSkipped:false},
-        {label:'Levies',        data:d.levies, backgroundColor:'#85b7eb', borderRadius:3, borderSkipped:false}
-      ]
-    },
-    options:{...BASE, scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:12}}}, y:{stacked:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:NAIRA,font:{size:12}}}}}
-  });
-}
-
-function buildPieChart() {
-  const canvas = document.getElementById('pieChart');
-  if (!canvas) return;
-  const eb = analyticsData?.entityBreakdown || {Companies:42,Banks:28,Hospitals:14,Schools:10,Plazas:6};
-  new Chart(canvas, {
-    type:'doughnut',
-    data:{
-      labels: Object.keys(eb),
-      datasets:[{data:Object.values(eb), backgroundColor:['#0a2d5e','#3266ad','#85b7eb','#b5d4f4','#d8e9f8'], borderWidth:2, borderColor:'#fff', hoverOffset:4}]
-    },
-    options:{...BASE, cutout:'60%', plugins:{...BASE.plugins, tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed}%`}}}}
-  });
-}
-
-function buildTrendChart() {
-  const canvas = document.getElementById('trendChart');
-  if (!canvas) return;
-  const t = analyticsData?.trend12m || {labels:['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'], values:[110,115,118,122,130,125,118,124,139,148,152,163]};
-  new Chart(canvas, {
-    type:'line',
-    data:{
-      labels:t.labels,
-      datasets:[{label:'Revenue (₦M)', data:t.values, borderColor:'#0a2d5e', backgroundColor:'rgba(10,45,94,.07)', borderWidth:2.5, tension:0.35, fill:true, pointBackgroundColor:'#0a2d5e', pointRadius:4, pointHoverRadius:6}]
-    },
-    options:{...BASE, scales:{x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:0,font:{size:11}}}, y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:NAIRA,font:{size:11}}}}}
-  });
-}
-
-function setChartFilter(el, type) {
-  el.closest('.chart-filters').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  buildBarChart(type);
-}
-
-/* ════════════════════════════════════════
-   TOAST NOTIFICATIONS
-   ════════════════════════════════════════ */
 
 function showToast(msg, type = 'info') {
   let container = document.getElementById('toast-container');
@@ -686,22 +626,16 @@ function showError(el, msg) {
   el.hidden = false;
 }
 
-/* ════════════════════════════════════════
-   INIT
-   ════════════════════════════════════════ */
-
 document.addEventListener('DOMContentLoaded', () => {
   loadSession();
   updateNavForAuth();
   showSection('home');
 
-  // Pay page bindings
   const payType   = document.getElementById('pay-type');
   const payAmount = document.getElementById('pay-amount');
   if (payType)   payType.addEventListener('change', updatePayTotal);
   if (payAmount) payAmount.addEventListener('input', updatePayTotal);
 
-  // Mobile nav close
   document.addEventListener('click', e => {
     const nav = document.getElementById('main-nav');
     const btn = document.getElementById('hamburger');
@@ -711,25 +645,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Keyboard: pay method tiles
   document.querySelectorAll('.pay-method').forEach(tile => {
     tile.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); selectPayMethod(tile); } });
   });
 
-  // Keyboard: entity cards
   document.querySelectorAll('.entity-card').forEach(card => {
     card.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); card.click(); } });
   });
 
-  // Keyboard: star rating
   document.querySelectorAll('#star-rating .star').forEach(star => {
     star.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); setRating(parseInt(star.getAttribute('data-val'),10)); } });
-  });
-
-  // Verify backend is up
-  fetch('/api/health').then(r => r.json()).then(d => {
-    console.log('UTAPS backend:', d.status, d.version);
-  }).catch(() => {
-    console.warn('Backend not reachable — some features require the UTAPS server.');
   });
 });

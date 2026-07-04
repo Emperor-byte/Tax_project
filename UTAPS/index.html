@@ -28,13 +28,13 @@
 
     <nav class="topnav-links" aria-label="Primary navigation" id="main-nav">
       <a href="#" class="nav-link" data-section="home"       onclick="showSection('home');return false"><i class="ti ti-home-2"></i><span>Home</span></a>
-      <a href="#" class="nav-link" data-section="enterprise" onclick="showSection('enterprise');return false"><i class="ti ti-building"></i><span>Enterprise</span></a>
-      <a href="#" class="nav-link" data-section="legal"      onclick="showSection('legal');return false"><i class="ti ti-scale"></i><span>Legal &amp; Officers</span></a>
-      <a href="#" class="nav-link" data-section="pay"        onclick="showSection('pay');return false"><i class="ti ti-credit-card"></i><span>Pay</span></a>
-      <a href="#" class="nav-link" data-section="status"     onclick="showSection('status');return false"><i class="ti ti-report-analytics"></i><span>Status</span></a>
-      <a href="#" class="nav-link" data-section="analytics"  onclick="showSection('analytics');return false"><i class="ti ti-chart-bar"></i><span>Analytics</span></a>
-      <a href="#" class="nav-link" data-section="feedback"   onclick="showSection('feedback');return false"><i class="ti ti-message-star"></i><span>Feedback</span></a>
-      <a href="#" class="nav-link" data-section="forms"      onclick="showSection('forms');return false"><i class="ti ti-file-text"></i><span>Forms</span></a>
+      <a href="#" class="nav-link protected-link" data-section="enterprise" onclick="showSection('enterprise');return false" style="display:none;"><i class="ti ti-building"></i><span>Enterprise</span></a>
+      <a href="#" class="nav-link protected-link" data-section="legal"      onclick="showSection('legal');return false" style="display:none;"><i class="ti ti-scale"></i><span>Legal &amp; Officers</span></a>
+      <a href="#" class="nav-link protected-link" data-section="pay"        onclick="showSection('pay');return false" style="display:none;"><i class="ti ti-credit-card"></i><span>Pay</span></a>
+      <a href="#" class="nav-link protected-link" data-section="status"     onclick="showSection('status');return false" style="display:none;"><i class="ti ti-report-analytics"></i><span>Status</span></a>
+      <a href="#" class="nav-link admin-link" data-section="analytics"  onclick="showSection('analytics');return false" style="display:none;"><i class="ti ti-chart-bar"></i><span>Admin Dashboard</span></a>
+      <a href="#" class="nav-link protected-link" data-section="feedback"   onclick="showSection('feedback');return false" style="display:none;"><i class="ti ti-message-star"></i><span>Feedback</span></a>
+      <a href="#" class="nav-link protected-link" data-section="forms"      onclick="showSection('forms');return false" style="display:none;"><i class="ti ti-file-text"></i><span>Forms</span></a>
       <div class="mobile-only-actions">
         <button class="btn-nav-login" onclick="showSection('login')">Sign in</button>
         <button class="btn-nav-signup" onclick="showSection('register')">Register</button>
@@ -253,9 +253,23 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="reg-rc">CAC RC Number</label>
-              <input id="reg-rc" type="text" placeholder="RC-0000000" />
+              <label for="reg-location">Location (Umuahia Metropolis) <span class="req">*</span></label>
+              <select id="reg-location">
+                <option value="">Select location…</option>
+                <option>Aba Road</option>
+                <option>Azikiwe Road</option>
+                <option>Bank Road</option>
+                <option>Bende Road</option>
+                <option>Ikot Ekpene Road</option>
+                <option>Mission Hill</option>
+                <option>Uwalaka Street</option>
+                <option>Other / Unlisted</option>
+              </select>
             </div>
+          </div>
+          <div class="form-group">
+            <label for="reg-rc">CAC RC Number</label>
+            <input id="reg-rc" type="text" placeholder="RC-0000000" />
           </div>
           <div class="form-group">
             <label for="reg-address">Business Address in Umuahia Metropolis <span class="req">*</span></label>
@@ -288,8 +302,8 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="reg-email">Email Address <span class="req">*</span></label>
-              <input id="reg-email" type="email" placeholder="admin@company.com" />
+              <label for="reg-email">Gmail Address <span class="req">*</span></label>
+              <input id="reg-email" type="email" placeholder="admin@gmail.com" />
             </div>
             <div class="form-group">
               <label for="reg-phone">Phone Number <span class="req">*</span></label>
@@ -637,54 +651,77 @@
     </div>
   </section>
 
-  <!-- ────────────────── ANALYTICS ────────────────── -->
+  <!-- ────────────────── ADMIN DASHBOARD ────────────────── -->
   <section id="section-analytics" class="page">
     <div class="section-block">
       <div class="page-header">
         <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
         <div>
-          <h1>Revenue Analytics Dashboard</h1>
-          <p>Monthly collections — Umuahia Metropolis, Fiscal Year 2026</p>
+          <h1>Admin Dashboard</h1>
+          <p>UTAPS Central Administration — Umuahia Metropolis</p>
         </div>
       </div>
-      <div class="stat-grid">
-        <div class="stat-card"><span class="stat-lbl">Total collected YTD</span><span class="stat-val" id="stat-ytd">₦847M</span><span class="stat-chg positive"><i class="ti ti-trending-up"></i> 18.3% vs 2025</span></div>
-        <div class="stat-card"><span class="stat-lbl">June collection (est.)</span><span class="stat-val" id="stat-june">₦163M</span><span class="stat-chg positive"><i class="ti ti-trending-up"></i> 7.1% vs May</span></div>
-        <div class="stat-card"><span class="stat-lbl">Registered taxpayers</span><span class="stat-val" id="stat-reg">4,812</span><span class="stat-chg positive"><i class="ti ti-trending-up"></i> 312 new this year</span></div>
-        <div class="stat-card"><span class="stat-lbl">Outstanding liabilities</span><span class="stat-val" id="stat-out">₦94M</span><span class="stat-chg negative"><i class="ti ti-alert-circle"></i> 12 new debtors</span></div>
+
+      <div class="stat-grid" style="margin-bottom:2rem">
+        <div class="stat-card"><span class="stat-lbl">Registered Taxpayers</span><span class="stat-val" id="admin-stat-reg">0</span><span class="stat-chg positive"><i class="ti ti-users"></i> Total entities</span></div>
+        <div class="stat-card"><span class="stat-lbl">Total Collected YTD</span><span class="stat-val" id="admin-stat-paid">₦0M</span><span class="stat-chg positive"><i class="ti ti-cash"></i> Revenue</span></div>
+        <div class="stat-card"><span class="stat-lbl">Outstanding Liabilities</span><span class="stat-val" id="admin-stat-out" style="color:#dc2626">₦0M</span><span class="stat-chg negative"><i class="ti ti-alert-triangle"></i> Pending</span></div>
       </div>
-      <div class="chart-card">
-        <div class="chart-hdr">
-          <div><h3>Monthly revenue collected (₦ millions)</h3><p>Jan–Jun 2026 · All tax heads combined</p></div>
-          <div class="chart-filters" role="group">
-            <button class="filter-btn active" onclick="setChartFilter(this,'all')">All</button>
-            <button class="filter-btn" onclick="setChartFilter(this,'corporate')">Corporate</button>
-            <button class="filter-btn" onclick="setChartFilter(this,'paye')">PAYE</button>
-            <button class="filter-btn" onclick="setChartFilter(this,'levies')">Levies</button>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" onclick="switchTab(this,'admin1')">Defaulters &amp; Debtors</button>
+        <button class="tab" role="tab" onclick="switchTab(this,'admin2')">Registered Enterprises</button>
+        <button class="tab" role="tab" onclick="switchTab(this,'admin3')">Feedback Messages</button>
+        <button class="tab" role="tab" onclick="switchTab(this,'admin4')">Analytics &amp; Trends</button>
+      </div>
+
+      <div id="admin1" class="tab-panel form-card">
+        <h2 class="form-title"><i class="ti ti-alert-octagon" style="color:#dc2626"></i> Defaulters Profiles &amp; Deadlines</h2>
+        <div class="status-table-wrap">
+          <div class="status-table-head">
+            <span>Entity</span><span>TIN</span><span>Obligation</span><span>Deadline</span><span>Amount</span><span>Status</span>
+          </div>
+          <div id="admin-defaulters-list">
+            <div style="padding:1.5rem;text-align:center;color:var(--text-muted);">Loading defaulters...</div>
           </div>
         </div>
-        <div class="chart-legend">
-          <span class="leg-item"><span class="leg-sw" style="background:#0a2d5e"></span>Corporate tax</span>
-          <span class="leg-item"><span class="leg-sw" style="background:#3266ad"></span>PAYE</span>
-          <span class="leg-item"><span class="leg-sw" style="background:#85b7eb"></span>Levies &amp; others</span>
-        </div>
-        <div class="chart-wrap" style="height:300px"><canvas id="revenueChart"></canvas></div>
       </div>
-      <div class="two-col">
-        <div class="chart-card">
-          <div class="chart-hdr"><div><h3>Revenue by entity type</h3><p>Share of total 2026 YTD — Umuahia Metropolis</p></div></div>
-          <div class="chart-legend">
-            <span class="leg-item"><span class="leg-sw" style="background:#0a2d5e"></span>Companies 42%</span>
-            <span class="leg-item"><span class="leg-sw" style="background:#3266ad"></span>Banks 28%</span>
-            <span class="leg-item"><span class="leg-sw" style="background:#85b7eb"></span>Hospitals 14%</span>
-            <span class="leg-item"><span class="leg-sw" style="background:#b5d4f4"></span>Schools 10%</span>
-            <span class="leg-item"><span class="leg-sw" style="background:#d8e9f8"></span>Plazas 6%</span>
+
+      <div id="admin2" class="tab-panel form-card" hidden>
+        <h2 class="form-title"><i class="ti ti-building-bank"></i> Registered Enterprises</h2>
+        <div class="status-table-wrap">
+          <div class="status-table-head">
+            <span>Business Name</span><span>TIN</span><span>Type</span><span>Location</span><span>Status</span>
           </div>
-          <div class="chart-wrap" style="height:220px"><canvas id="pieChart"></canvas></div>
+          <div id="admin-enterprise-list">
+            <div style="padding:1.5rem;text-align:center;color:var(--text-muted);">Loading enterprises...</div>
+          </div>
         </div>
+      </div>
+
+      <div id="admin3" class="tab-panel form-card" hidden>
+        <h2 class="form-title"><i class="ti ti-message-star"></i> Feedback Messages from Users</h2>
+        <div id="admin-feedback-list" style="display:flex;flex-direction:column;gap:1rem;">
+          <div style="padding:1.5rem;text-align:center;color:var(--text-muted);">Loading feedback...</div>
+        </div>
+      </div>
+
+      <div id="admin4" class="tab-panel" hidden>
         <div class="chart-card">
-          <div class="chart-hdr"><div><h3>12-month collection trend</h3><p>Jul 2025 – Jun 2026 · Umuahia Metropolis</p></div></div>
-          <div class="chart-wrap" style="height:250px"><canvas id="trendChart"></canvas></div>
+          <div class="chart-hdr">
+            <div><h3>Monthly Analytics</h3><p>Revenue collected per month</p></div>
+          </div>
+          <div class="chart-wrap" style="height:300px"><canvas id="adminRevenueChart"></canvas></div>
+        </div>
+        <div class="two-col" style="margin-top:1.5rem">
+          <div class="chart-card">
+            <div class="chart-hdr"><div><h3>Revenue by entity type</h3></div></div>
+            <div class="chart-wrap" style="height:220px"><canvas id="adminPieChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-hdr"><div><h3>12-month collection trend</h3></div></div>
+            <div class="chart-wrap" style="height:250px"><canvas id="adminTrendChart"></canvas></div>
+          </div>
         </div>
       </div>
     </div>

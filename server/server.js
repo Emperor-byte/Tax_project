@@ -1,150 +1,87 @@
-/**
- * TaxUmuahia · UTAPS Backend
- * Express REST API — Umuahia Tax Automation & Payment System
- * Powered by: Node.js, Express, SQLite (via JSON file store), JWT
- */
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const path = require('path');
+const mongoose = require('mongoose');
 
-'use strict';
-
-const express    = require('express');
-const cors       = require('cors');
-const jwt        = require('jsonwebtoken');
-const crypto     = require('crypto');
-const path       = require('path');
-const fs         = require('fs');
-
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'utaps-secret-2026-abia-state';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/utaps';
 
-/* ── Middleware ─────────────────────────────────────────────── */
+// Middleware
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve frontend static files
 app.use(express.static(path.join(__dirname, '../UTAPS')));
 
-/* ════════════════════════════════════════════════════
-   FILE-BASED DATABASE (JSON flat files — no native modules)
-   ════════════════════════════════════════════════════ */
+// MongoDB Connection
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
 
-const isVercel = process.env.VERCEL;
-const DB_DIR = isVercel ? '/tmp/db' : path.join(__dirname, 'db');
-if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+// Schemas
+const userSchema = new mongoose.Schema({
+  tin: { type: String, required: true, unique: true },
+  bizName: { type: String, required: true },
+  entityType: { type: String, required: true },
+  address: { type: String, required: true },
+  location: { type: String, required: true }, // Added location
+  email: { type: String, required: true, unique: true }, // Required to be gmail in validation
+  phone: { type: String, required: true },
+  rcNumber: String,
+  annualTurnover: { type: Number, default: 0 },
+  employees: { type: Number, default: 0 },
+  contactPerson: String,
+  role: { type: String, default: 'user' }, // 'admin' or 'user'
+  passwordHash: { type: String, required: true },
+  utapsId: { type: String, required: true, unique: true },
+  status: { type: String, default: 'active' }
+}, { timestamps: true });
 
-// Copy seed files to /tmp/db on Vercel so demo data is available
-if (isVercel) {
-  const srcDir = path.join(process.cwd(), 'server', 'db');
-  ['users', 'payments', 'feedback', 'notices'].forEach(name => {
-    const srcFile = path.join(srcDir, name + '.json');
-    const destFile = path.join(DB_DIR, name + '.json');
-    if (!fs.existsSync(destFile) && fs.existsSync(srcFile)) {
-      try {
-        fs.copyFileSync(srcFile, destFile);
-      } catch (err) {
-        console.error(`Failed to copy seed file ${name}:`, err);
-      }
-    }
-  });
-}
+const paymentSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  taxType: String,
+  period: String,
+  amount: Number,
+  assessmentRef: String,
+  method: String,
+  status: String,
+  dueDate: String,
+  paidAt: Date,
+  receiptNo: String
+});
 
+const feedbackSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  entityName: String,
+  entityType: String,
+  category: String,
+  rating: Number,
+  easeRating: Number,
+  speedRating: Number,
+  supportRating: Number,
+  deadlineRating: Number,
+  comment: String
+}, { timestamps: true });
 
-function dbPath(name) { return path.join(DB_DIR, name + '.json'); }
+const noticeSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  type: String,
+  title: String,
+  body: String,
+  issuedAt: Date,
+  noticeRef: String
+});
 
-function readDB(name) {
-  const file = dbPath(name);
-  if (!fs.existsSync(file)) return [];
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch { return []; }
-}
+const User = mongoose.model('User', userSchema);
+const Payment = mongoose.model('Payment', paymentSchema);
+const Feedback = mongoose.model('Feedback', feedbackSchema);
+const Notice = mongoose.model('Notice', noticeSchema);
 
-function writeDB(name, data) {
-  fs.writeFileSync(dbPath(name), JSON.stringify(data, null, 2));
-}
-
-function nextId(collection) {
-  if (!collection.length) return 1;
-  return Math.max(...collection.map(r => r.id || 0)) + 1;
-}
-
-/* ── Seed demo data ─────────────────────────────────────────── */
-function seedData() {
-  // Only seed if tables are empty
-  if (readDB('users').length === 0) {
-    const demoUsers = [
-      {
-        id: 1,
-        tin: '12345678-0001',
-        bizName: 'Sunshine Medical Centre Ltd',
-        entityType: 'Hospital / Clinic',
-        address: 'No. 5 Owerri Road, Umuahia Metropolis',
-        email: 'admin@sunshinemedical.ng',
-        phone: '08012345678',
-        rcNumber: 'RC-0012345',
-        annualTurnover: 5000000,
-        employees: 45,
-        contactPerson: 'Dr. Emeka Obi',
-        role: 'Medical Director',
-        passwordHash: hashPassword('demo1234'),
-        utapsId: 'UTAPS-2026-0001',
-        status: 'active',
-        createdAt: new Date('2026-01-15').toISOString()
-      },
-      {
-        id: 2,
-        tin: '98765432-0001',
-        bizName: 'First Trust Microfinance Bank',
-        entityType: 'Bank / Financial Institution',
-        address: 'Plot 12 Bank Road, Umuahia Metropolis',
-        email: 'compliance@firsttrust.ng',
-        phone: '08098765432',
-        rcNumber: 'RC-0054321',
-        annualTurnover: 25000000,
-        employees: 120,
-        contactPerson: 'Mrs. Adaeze Nwosu',
-        role: 'CFO',
-        passwordHash: hashPassword('bank2024'),
-        utapsId: 'UTAPS-2026-0002',
-        status: 'active',
-        createdAt: new Date('2026-01-20').toISOString()
-      }
-    ];
-    writeDB('users', demoUsers);
-    console.log('✅ Seeded demo users');
-  }
-
-  if (readDB('payments').length === 0) {
-    const demoPayments = [
-      { id: 1, userId: 1, taxType: 'Corporate Income Tax', period: '2025', amount: 120000, assessmentRef: 'ASS/2025/CIT/0041', method: 'Remita', status: 'paid', paidAt: new Date('2026-03-20').toISOString(), receiptNo: 'UTAPS-REC-20260320-0041' },
-      { id: 2, userId: 1, taxType: 'PAYE Q1 2026',         period: 'Q1 2026', amount: 45000, assessmentRef: 'ASS/2026/PAYE/0091', method: 'Bank transfer', status: 'overdue', dueDate: '2026-04-30', paidAt: null, receiptNo: null },
-      { id: 3, userId: 1, taxType: 'PAYE Q2 2026',         period: 'Q2 2026', amount: 45000, assessmentRef: 'ASS/2026/PAYE/0092', method: null, status: 'due', dueDate: '2026-06-30', paidAt: null, receiptNo: null },
-      { id: 4, userId: 1, taxType: 'Business Premises Levy', period: '2026',  amount: 25000, assessmentRef: 'ASS/2026/BPL/0012', method: null, status: 'upcoming', dueDate: '2026-09-30', paidAt: null, receiptNo: null },
-      { id: 5, userId: 2, taxType: 'Corporate Income Tax', period: '2025',    amount: 850000, assessmentRef: 'ASS/2025/CIT/0012', method: 'Remita', status: 'paid', paidAt: new Date('2026-02-28').toISOString(), receiptNo: 'UTAPS-REC-20260228-0012' },
-      { id: 6, userId: 2, taxType: 'PAYE Q1 2026',         period: 'Q1 2026', amount: 320000, assessmentRef: 'ASS/2026/PAYE/0033', method: 'Remita', status: 'paid', paidAt: new Date('2026-04-15').toISOString(), receiptNo: 'UTAPS-REC-20260415-0033' }
-    ];
-    writeDB('payments', demoPayments);
-    console.log('✅ Seeded demo payments');
-  }
-
-  if (readDB('feedback').length === 0) {
-    const demoFeedback = [
-      { id: 1, userId: 2, entityName: 'First Trust Microfinance Bank', entityType: 'Bank / Financial Institution', category: 'Payment process', rating: 5, easeRating: 5, speedRating: 4, supportRating: 5, deadlineRating: 4, comment: 'The payment portal is much easier than the old process. Quick receipt issuance.', createdAt: new Date('2026-06-15').toISOString() },
-      { id: 2, userId: null, entityName: 'Sunrise Academy', entityType: 'School / Educational Institution', category: 'Portal usability', rating: 3, easeRating: 3, speedRating: 3, supportRating: 4, deadlineRating: 3, comment: 'Wish the education levy section was more clearly labelled. Otherwise smooth.', createdAt: new Date('2026-06-02').toISOString() }
-    ];
-    writeDB('feedback', demoFeedback);
-    console.log('✅ Seeded demo feedback');
-  }
-
-  if (readDB('notices').length === 0) {
-    writeDB('notices', [
-      { id: 1, userId: 1, type: 'penalty', paymentId: 2, title: 'PAYE Q1 2026 Overdue', body: 'Your PAYE Q1 2026 remittance of ₦45,000 is overdue. Penalty of 10% applies.', issuedAt: new Date('2026-05-10').toISOString(), noticeRef: 'UTAPS/2026/PEN/00412' }
-    ]);
-    console.log('✅ Seeded demo notices');
-  }
-}
-
-/* ── Password helpers (Node crypto, no native deps) ─────────── */
+// Password helpers
 function hashPassword(pw) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(pw, salt, 64).toString('hex');
@@ -159,10 +96,9 @@ function verifyPassword(pw, stored) {
   } catch { return false; }
 }
 
-/* ── JWT helpers ────────────────────────────────────────────── */
 function signToken(user) {
   return jwt.sign(
-    { id: user.id, tin: user.tin, utapsId: user.utapsId },
+    { id: user._id, tin: user.tin, utapsId: user.utapsId, role: user.role },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
@@ -181,448 +117,354 @@ function authMiddleware(req, res, next) {
   }
 }
 
-/* ══════════════════════════════════════════════════
-   API ROUTES
-   ══════════════════════════════════════════════════ */
+function adminMiddleware(req, res, next) {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    return res.status(403).json({ error: 'Forbidden — Admins only' });
+  }
+}
+
+// Seed Admin
+async function seedAdmin() {
+  try {
+    const adminExists = await User.findOne({ email: 'admin@gmail.com' });
+    if (!adminExists) {
+      await User.create({
+        tin: 'ADMIN-001',
+        bizName: 'System Administrator',
+        entityType: 'Government',
+        address: 'Secretariat, Umuahia',
+        location: 'Umuahia North',
+        email: 'admin@gmail.com',
+        phone: '08000000000',
+        role: 'admin',
+        passwordHash: hashPassword('admin1234'),
+        utapsId: 'UTAPS-ADMIN',
+        status: 'active'
+      });
+      console.log('✅ Admin user seeded');
+    }
+  } catch (err) {
+    console.error('Error seeding admin:', err);
+  }
+}
+
+mongoose.connection.once('open', seedAdmin);
 
 const router = express.Router();
 
-/* ── Health check ───────────────────────────────── */
 router.get('/health', (req, res) => {
-  res.json({ status: 'ok', system: 'UTAPS', version: '1.0.0', time: new Date().toISOString() });
+  res.json({ status: 'ok', system: 'UTAPS', version: '2.0.0 (MongoDB)', time: new Date().toISOString() });
 });
 
-/* ────────────────────────────────────────────────
-   AUTH
-   ──────────────────────────────────────────────── */
+// Auth
+router.post('/auth/register', async (req, res) => {
+  try {
+    const { bizName, tin, entityType, address, location, email, phone, rcNumber,
+            annualTurnover, employees, contactPerson, role, password } = req.body;
 
-/** POST /api/auth/register */
-router.post('/auth/register', (req, res) => {
-  const { bizName, tin, entityType, address, email, phone, rcNumber,
-          annualTurnover, employees, contactPerson, role, password } = req.body;
+    const missing = ['bizName','tin','entityType','address','location','email','phone','password']
+      .filter(f => !req.body[f]?.trim());
 
-  const missing = ['bizName','tin','entityType','address','email','phone','password']
-    .filter(f => !req.body[f]?.trim());
+    if (missing.length) return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
 
-  if (missing.length) {
-    return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
-  }
-
-  const users = readDB('users');
-
-  if (users.find(u => u.tin === tin.trim())) {
-    return res.status(409).json({ error: 'A UTAPS account with this TIN already exists.' });
-  }
-
-  if (users.find(u => u.email?.toLowerCase() === email.toLowerCase())) {
-    return res.status(409).json({ error: 'An account with this email already exists.' });
-  }
-
-  const id      = nextId(users);
-  const utapsId = `UTAPS-2026-${String(id).padStart(4,'0')}`;
-
-  const newUser = {
-    id, tin: tin.trim(), bizName: bizName.trim(), entityType,
-    address: address.trim(), email: email.toLowerCase().trim(),
-    phone: phone.trim(), rcNumber: rcNumber?.trim() || '',
-    annualTurnover: parseFloat(annualTurnover) || 0,
-    employees: parseInt(employees) || 0,
-    contactPerson: contactPerson?.trim() || '',
-    role: role?.trim() || '',
-    passwordHash: hashPassword(password),
-    utapsId, status: 'pending_verification',
-    createdAt: new Date().toISOString()
-  };
-
-  users.push(newUser);
-  writeDB('users', users);
-
-  const { passwordHash, ...safeUser } = newUser;
-  const token = signToken(newUser);
-
-  res.status(201).json({
-    message: `Registration successful! Your UTAPS ID is ${utapsId}. A verification email has been sent to ${email}.`,
-    user: safeUser,
-    token
-  });
-});
-
-/** POST /api/auth/login */
-router.post('/auth/login', (req, res) => {
-  const { tin, password } = req.body;
-
-  if (!tin) {
-    return res.status(400).json({ error: 'TIN or email is required.' });
-  }
-
-  const users = readDB('users');
-  let user = users.find(u =>
-    u.tin === tin.trim() || u.email?.toLowerCase() === tin.toLowerCase().trim()
-  );
-
-  // Demo behavior: if user doesn't exist, create a dynamic profile on the fly
-  if (!user) {
-    const id = nextId(users);
-    const utapsId = `UTAPS-2026-${String(id).padStart(4, '0')}`;
-    const cleanTin = tin.trim();
-    const isEmail = cleanTin.includes('@');
-
-    user = {
-      id,
-      tin: cleanTin,
-      bizName: isEmail ? cleanTin.split('@')[0].toUpperCase() + ' ENTERPRISES LTD' : 'UMUAHIA BUSINESS CENTRE LTD',
-      entityType: 'Company / Corporation',
-      address: 'No. 15 Owerri Road, Umuahia Metropolis',
-      email: isEmail ? cleanTin.toLowerCase() : `demo_user_${id}@utaps-demo.gov.ng`,
-      phone: '080' + String(Math.floor(1000000 + Math.random() * 9000000)),
-      rcNumber: 'RC-' + String(Math.floor(100000 + Math.random() * 900000)),
-      annualTurnover: 7500000,
-      employees: 18,
-      contactPerson: isEmail ? cleanTin.split('@')[0] : 'Demo User',
-      role: 'Managing Director',
-      passwordHash: hashPassword(password || 'demo1234'),
-      utapsId,
-      status: 'active',
-      createdAt: new Date().toISOString()
-    };
-
-    users.push(user);
-    writeDB('users', users);
-
-    // Seed default payment history so the user has visual analytics and details to see
-    const payments = readDB('payments');
-    const pid = nextId(payments);
-    const newPayments = [
-      { id: pid,     userId: id, taxType: 'Corporate Income Tax', period: '2025', amount: 150000, assessmentRef: `ASS/2025/CIT/${1000 + id}`, method: 'Remita', status: 'paid', paidAt: new Date().toISOString(), receiptNo: `UTAPS-REC-${Date.now()}` },
-      { id: pid + 1, userId: id, taxType: 'PAYE Q1 2026',         period: 'Q1 2026', amount: 35000, assessmentRef: `ASS/2026/PAYE/${2000 + id}`, method: null, status: 'overdue', dueDate: '2026-04-30', paidAt: null, receiptNo: null },
-      { id: pid + 2, userId: id, taxType: 'PAYE Q2 2026',         period: 'Q2 2026', amount: 35000, assessmentRef: `ASS/2026/PAYE/${3000 + id}`, method: null, status: 'due', dueDate: '2026-06-30', paidAt: null, receiptNo: null }
-    ];
-    payments.push(...newPayments);
-    writeDB('payments', payments);
-  }
-
-  // Generate JWT and log user in successfully (any password works in this demo)
-  const { passwordHash, ...safeUser } = user;
-  const token = signToken(user);
-
-  res.json({
-    message: `Welcome back, ${user.contactPerson || user.bizName}!`,
-    user: safeUser,
-    token
-  });
-});
-
-/** GET /api/auth/me — get current user profile */
-router.get('/auth/me', authMiddleware, (req, res) => {
-  const users = readDB('users');
-  const user  = users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'User not found.' });
-  const { passwordHash, ...safe } = user;
-  res.json({ user: safe });
-});
-
-/* ────────────────────────────────────────────────
-   ENTITIES / ENTERPRISE
-   ──────────────────────────────────────────────── */
-
-/** GET /api/entities — list all registered entities (admin view) */
-router.get('/entities', (req, res) => {
-  const users = readDB('users');
-  const safe  = users.map(({ passwordHash, ...u }) => u);
-  res.json({ count: safe.length, entities: safe });
-});
-
-/** GET /api/entities/:tin — lookup by TIN */
-router.get('/entities/:tin', (req, res) => {
-  const users  = readDB('users');
-  const entity = users.find(u => u.tin === req.params.tin);
-  if (!entity) return res.status(404).json({ error: 'No entity found with that TIN.' });
-  const { passwordHash, ...safe } = entity;
-  res.json({ entity: safe });
-});
-
-/** GET /api/entities/me/profile — authenticated user's own profile */
-router.get('/entities/me/profile', authMiddleware, (req, res) => {
-  const users = readDB('users');
-  const user  = users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'Profile not found.' });
-  const { passwordHash, ...safe } = user;
-  res.json({ entity: safe });
-});
-
-/* ────────────────────────────────────────────────
-   PAYMENTS
-   ──────────────────────────────────────────────── */
-
-/** GET /api/payments — current user's payment history */
-router.get('/payments', authMiddleware, (req, res) => {
-  const payments = readDB('payments').filter(p => p.userId === req.user.id);
-  res.json({ count: payments.length, payments });
-});
-
-/** POST /api/payments — create a new payment record */
-router.post('/payments', authMiddleware, (req, res) => {
-  const { taxType, period, amount, assessmentRef, method } = req.body;
-
-  if (!taxType || !amount || !method) {
-    return res.status(400).json({ error: 'taxType, amount, and method are required.' });
-  }
-
-  const payments  = readDB('payments');
-  const receiptNo = `UTAPS-REC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(nextId(payments)).padStart(4,'0')}`;
-
-  const newPayment = {
-    id:            nextId(payments),
-    userId:        req.user.id,
-    taxType,
-    period:        period || '',
-    amount:        parseFloat(amount),
-    assessmentRef: assessmentRef || '',
-    method,
-    status:        'paid',
-    paidAt:        new Date().toISOString(),
-    receiptNo
-  };
-
-  payments.push(newPayment);
-  writeDB('payments', payments);
-
-  res.status(201).json({
-    message: `Payment of ₦${parseFloat(amount).toLocaleString()} recorded successfully.`,
-    payment: newPayment,
-    receiptNo
-  });
-});
-
-/** GET /api/payments/:id/receipt — single payment receipt */
-router.get('/payments/:id/receipt', authMiddleware, (req, res) => {
-  const payments = readDB('payments');
-  const payment  = payments.find(p => p.id === parseInt(req.params.id) && p.userId === req.user.id);
-  if (!payment) return res.status(404).json({ error: 'Payment not found.' });
-
-  const users = readDB('users');
-  const user  = users.find(u => u.id === req.user.id);
-
-  res.json({
-    receipt: {
-      receiptNo:    payment.receiptNo,
-      utapsId:      user?.utapsId,
-      bizName:      user?.bizName,
-      tin:          user?.tin,
-      taxType:      payment.taxType,
-      period:       payment.period,
-      amount:       payment.amount,
-      method:       payment.method,
-      paidAt:       payment.paidAt,
-      issuedBy:     'Umuahia Tax Automation & Payment System (UTAPS)',
-      poweredBy:    'Abia State Internal Revenue Service (ABSIRS)'
+    if (!email.toLowerCase().endsWith('@gmail.com')) {
+      return res.status(400).json({ error: 'A Gmail address (@gmail.com) is required for registration.' });
     }
-  });
-});
 
-/* ────────────────────────────────────────────────
-   STATUS REPORTS
-   ──────────────────────────────────────────────── */
-
-/** GET /api/status/:tin — full compliance status for a TIN */
-router.get('/status/:tin', (req, res) => {
-  const users    = readDB('users');
-  const payments = readDB('payments');
-  const notices  = readDB('notices');
-
-  const entity = users.find(u => u.tin === req.params.tin);
-  if (!entity) return res.status(404).json({ error: 'No entity registered with this TIN in Umuahia Metropolis.' });
-
-  const entityPayments = payments.filter(p => p.userId === entity.id);
-  const entityNotices  = notices.filter(n => n.userId === entity.id);
-
-  const overdue   = entityPayments.filter(p => p.status === 'overdue');
-  const due       = entityPayments.filter(p => p.status === 'due');
-  const isCompliant = overdue.length === 0;
-
-  const { passwordHash, ...safeEntity } = entity;
-
-  res.json({
-    entity:         safeEntity,
-    overallStatus:  isCompliant ? 'Compliant' : 'Non-Compliant',
-    payments:       entityPayments,
-    notices:        entityNotices,
-    summary: {
-      totalPaid:      entityPayments.filter(p => p.status === 'paid').reduce((s,p) => s + p.amount, 0),
-      totalOutstanding: [...overdue, ...due].reduce((s,p) => s + p.amount, 0),
-      overdueCount:   overdue.length,
-      dueCount:       due.length
+    const existingUser = await User.findOne({ $or: [{ tin: tin.trim() }, { email: email.toLowerCase().trim() }] });
+    if (existingUser) {
+      return res.status(409).json({ error: 'An account with this TIN or email already exists.' });
     }
-  });
-});
 
-/** GET /api/status/me/report — authenticated user's own status */
-router.get('/status/me/report', authMiddleware, (req, res) => {
-  const users    = readDB('users');
-  const payments = readDB('payments');
-  const notices  = readDB('notices');
+    const count = await User.countDocuments();
+    const utapsId = `UTAPS-2026-${String(count + 1).padStart(4,'0')}`;
 
-  const entity         = users.find(u => u.id === req.user.id);
-  const entityPayments = payments.filter(p => p.userId === req.user.id);
-  const entityNotices  = notices.filter(n => n.userId === req.user.id);
+    const newUser = await User.create({
+      tin: tin.trim(), bizName: bizName.trim(), entityType,
+      address: address.trim(), location: location.trim(), email: email.toLowerCase().trim(),
+      phone: phone.trim(), rcNumber: rcNumber?.trim() || '',
+      annualTurnover: parseFloat(annualTurnover) || 0,
+      employees: parseInt(employees) || 0,
+      contactPerson: contactPerson?.trim() || '',
+      role: role?.trim() || 'user',
+      passwordHash: hashPassword(password),
+      utapsId, status: 'pending_verification'
+    });
 
-  const overdue = entityPayments.filter(p => p.status === 'overdue');
-  const due     = entityPayments.filter(p => p.status === 'due');
+    const safeUser = newUser.toObject();
+    delete safeUser.passwordHash;
+    const token = signToken(newUser);
 
-  const { passwordHash, ...safeEntity } = entity;
-
-  res.json({
-    entity:        safeEntity,
-    overallStatus: overdue.length === 0 ? 'Compliant' : 'Non-Compliant',
-    payments:      entityPayments,
-    notices:       entityNotices,
-    summary: {
-      totalPaid:        entityPayments.filter(p => p.status === 'paid').reduce((s,p) => s + p.amount, 0),
-      totalOutstanding: [...overdue, ...due].reduce((s,p) => s + p.amount, 0),
-      overdueCount:     overdue.length,
-      dueCount:         due.length
-    }
-  });
-});
-
-/** POST /api/notices — issue a compliance notice (admin action) */
-router.post('/notices', (req, res) => {
-  const { tin, type, title, body } = req.body;
-  if (!tin || !title) return res.status(400).json({ error: 'tin and title are required.' });
-
-  const users   = readDB('users');
-  const notices = readDB('notices');
-  const entity  = users.find(u => u.tin === tin);
-  if (!entity) return res.status(404).json({ error: 'Entity not found.' });
-
-  const id     = nextId(notices);
-  const notice = {
-    id,
-    userId:    entity.id,
-    type:      type || 'general',
-    title,
-    body:      body || '',
-    issuedAt:  new Date().toISOString(),
-    noticeRef: `UTAPS/${new Date().getFullYear()}/NOT/${String(id).padStart(5,'0')}`
-  };
-
-  notices.push(notice);
-  writeDB('notices', notices);
-
-  res.status(201).json({ message: 'Notice issued successfully.', notice });
-});
-
-/* ────────────────────────────────────────────────
-   FEEDBACK & RATINGS
-   ──────────────────────────────────────────────── */
-
-/** POST /api/feedback — submit feedback */
-router.post('/feedback', (req, res) => {
-  const { entityName, entityType, category, rating, easeRating,
-          speedRating, supportRating, deadlineRating, comment } = req.body;
-
-  if (!rating || rating < 1 || rating > 5) {
-    return res.status(400).json({ error: 'A rating between 1 and 5 is required.' });
+    res.status(201).json({
+      message: `Registration successful! Your UTAPS ID is ${utapsId}.`,
+      user: safeUser, token
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const feedbackList = readDB('feedback');
-
-  const newFeedback = {
-    id:             nextId(feedbackList),
-    userId:         null,
-    entityName:     entityName || 'Anonymous',
-    entityType:     entityType || '',
-    category:       category || 'General',
-    rating:         parseInt(rating),
-    easeRating:     parseInt(easeRating) || 0,
-    speedRating:    parseInt(speedRating) || 0,
-    supportRating:  parseInt(supportRating) || 0,
-    deadlineRating: parseInt(deadlineRating) || 0,
-    comment:        comment || '',
-    createdAt:      new Date().toISOString()
-  };
-
-  feedbackList.push(newFeedback);
-  writeDB('feedback', feedbackList);
-
-  res.status(201).json({
-    message: 'Thank you! Your feedback has been received and will be reviewed by the UTAPS team.',
-    feedback: newFeedback
-  });
 });
 
-/** GET /api/feedback — get all feedback with aggregated stats */
-router.get('/feedback', (req, res) => {
-  const feedbackList = readDB('feedback');
-  if (!feedbackList.length) return res.json({ count: 0, averageRating: 0, distribution: {}, feedback: [] });
+router.post('/auth/login', async (req, res) => {
+  try {
+    const { tin, password } = req.body;
+    if (!tin) return res.status(400).json({ error: 'TIN or email is required.' });
 
-  const avg = feedbackList.reduce((s, f) => s + f.rating, 0) / feedbackList.length;
+    const cleanTin = tin.trim().toLowerCase();
+    const user = await User.findOne({ $or: [{ tin: cleanTin }, { email: cleanTin }] });
 
-  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  feedbackList.forEach(f => { distribution[f.rating] = (distribution[f.rating] || 0) + 1; });
+    if (!user || !verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
 
-  // Convert to percentages
-  const total = feedbackList.length;
-  const distPct = {};
-  Object.entries(distribution).forEach(([k, v]) => {
-    distPct[k] = Math.round((v / total) * 100);
-  });
+    const safeUser = user.toObject();
+    delete safeUser.passwordHash;
+    const token = signToken(user);
 
-  res.json({
-    count:          total,
-    averageRating:  Math.round(avg * 10) / 10,
-    distribution:   distPct,
-    feedback:       feedbackList.slice().reverse() // newest first
-  });
+    res.json({ message: `Welcome back, ${user.contactPerson || user.bizName}!`, user: safeUser, token });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-/* ────────────────────────────────────────────────
-   ANALYTICS (revenue dashboard data)
-   ──────────────────────────────────────────────── */
-
-/** GET /api/analytics/summary */
-router.get('/analytics/summary', (req, res) => {
-  const payments = readDB('payments');
-  const users    = readDB('users');
-
-  const paid = payments.filter(p => p.status === 'paid');
-  const ytd  = paid.reduce((s, p) => s + (p.amount || 0), 0);
-
-  // Monthly breakdown Jan-Jun 2026 (demo data)
-  const monthly = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    corporate: [48, 52, 56, 62, 64, 68],
-    paye:      [42, 44, 51, 54, 56, 60],
-    levies:    [28, 28, 32, 32, 32, 35]
-  };
-
-  const entityBreakdown = {
-    Companies: 42, Banks: 28, Hospitals: 14, Schools: 10, Plazas: 6
-  };
-
-  const trend12m = {
-    labels: ['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
-    values: [110, 115, 118, 122, 130, 125, 118, 124, 139, 148, 152, 163]
-  };
-
-  res.json({
-    ytdTotal:          ytd || 847000000,
-    juneEstimate:      163000000,
-    registeredCount:   users.length,
-    outstandingLiabilities: payments
-      .filter(p => ['overdue','due'].includes(p.status))
-      .reduce((s,p) => s + p.amount, 0) || 94000000,
-    monthly,
-    entityBreakdown,
-    trend12m
-  });
+router.get('/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).lean();
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    delete user.passwordHash;
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-/* ────────────────────────────────────────────────
-   FORMS / DOWNLOADS (metadata only)
-   ──────────────────────────────────────────────── */
+// Admin Dashboard Route
+router.get('/admin/dashboard', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const users = await User.find({ role: { $ne: 'admin' } }).lean();
+    const payments = await Payment.find().populate('userId', 'bizName tin email phone location').lean();
+    const feedbacks = await Feedback.find().populate('userId', 'bizName').sort({ createdAt: -1 }).lean();
+    const notices = await Notice.find().lean();
 
-router.get('/forms', (req, res) => {
+    const registeredCount = users.length;
+    let totalPaid = 0;
+    let outstandingLiabilities = 0;
+    
+    const overduePayments = [];
+    const entityBreakdown = {};
+    const monthlyData = { Jan:0, Feb:0, Mar:0, Apr:0, May:0, Jun:0, Jul:0, Aug:0, Sep:0, Oct:0, Nov:0, Dec:0 };
+
+    payments.forEach(p => {
+      if (p.status === 'paid') {
+        totalPaid += p.amount;
+        if (p.paidAt) {
+          const month = new Date(p.paidAt).toLocaleString('en-us', { month: 'short' });
+          if (monthlyData[month] !== undefined) monthlyData[month] += p.amount;
+        }
+      } else if (p.status === 'overdue' || p.status === 'due') {
+        outstandingLiabilities += p.amount;
+      }
+
+      if (p.status === 'overdue') {
+        overduePayments.push(p);
+      }
+    });
+
+    users.forEach(u => {
+      entityBreakdown[u.entityType] = (entityBreakdown[u.entityType] || 0) + 1;
+    });
+
+    const debtorProfiles = overduePayments.map(op => {
+      return {
+        payment: op,
+        user: op.userId,
+        deadline: op.dueDate,
+        notices: notices.filter(n => String(n.userId) === String(op.userId?._id))
+      };
+    });
+
+    res.json({
+      registeredCount,
+      totalPaid,
+      outstandingLiabilities,
+      feedbacks,
+      registeredEnterprises: users.map(u => ({ bizName: u.bizName, tin: u.tin, type: u.entityType, location: u.location, status: u.status })),
+      debtorProfiles,
+      entityBreakdown,
+      monthlyAnalytics: monthlyData
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Entities
+router.get('/entities', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const users = await User.find({ role: { $ne: 'admin' } }, '-passwordHash').lean();
+    res.json({ count: users.length, entities: users });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/entities/:tin', async (req, res) => {
+  try {
+    const user = await User.findOne({ tin: req.params.tin }, '-passwordHash').lean();
+    if (!user) return res.status(404).json({ error: 'No entity found.' });
+    res.json({ entity: user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/entities/me/profile', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id, '-passwordHash').lean();
+    if (!user) return res.status(404).json({ error: 'Profile not found.' });
+    res.json({ entity: user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Payments
+router.get('/payments', authMiddleware, async (req, res) => {
+  try {
+    const payments = await Payment.find({ userId: req.user.id }).lean();
+    res.json({ count: payments.length, payments });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/payments', authMiddleware, async (req, res) => {
+  try {
+    const { taxType, period, amount, assessmentRef, method } = req.body;
+    if (!taxType || !amount || !method) return res.status(400).json({ error: 'taxType, amount, method required.' });
+
+    const count = await Payment.countDocuments();
+    const receiptNo = `UTAPS-REC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(count+1).padStart(4,'0')}`;
+
+    const newPayment = await Payment.create({
+      userId: req.user.id, taxType, period, amount: parseFloat(amount), assessmentRef,
+      method, status: 'paid', paidAt: new Date(), receiptNo
+    });
+    res.status(201).json({ message: 'Payment recorded successfully.', payment: newPayment, receiptNo });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/payments/:id/receipt', authMiddleware, async (req, res) => {
+  try {
+    const payment = await Payment.findOne({ _id: req.params.id, userId: req.user.id }).lean();
+    if (!payment) return res.status(404).json({ error: 'Payment not found.' });
+    const user = await User.findById(req.user.id).lean();
+
+    res.json({
+      receipt: {
+        receiptNo: payment.receiptNo, utapsId: user.utapsId, bizName: user.bizName, tin: user.tin,
+        taxType: payment.taxType, period: payment.period, amount: payment.amount, method: payment.method,
+        paidAt: payment.paidAt, issuedBy: 'UTAPS', poweredBy: 'ABSIRS'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Status
+router.get('/status/:tin', async (req, res) => {
+  try {
+    const entity = await User.findOne({ tin: req.params.tin }, '-passwordHash').lean();
+    if (!entity) return res.status(404).json({ error: 'Entity not found.' });
+
+    const payments = await Payment.find({ userId: entity._id }).lean();
+    const notices = await Notice.find({ userId: entity._id }).lean();
+
+    const overdue = payments.filter(p => p.status === 'overdue');
+    const due = payments.filter(p => p.status === 'due');
+
+    res.json({
+      entity, overallStatus: overdue.length === 0 ? 'Compliant' : 'Non-Compliant',
+      payments, notices,
+      summary: {
+        totalPaid: payments.filter(p => p.status === 'paid').reduce((s,p) => s + p.amount, 0),
+        totalOutstanding: [...overdue, ...due].reduce((s,p) => s + p.amount, 0),
+        overdueCount: overdue.length, dueCount: due.length
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/status/me/report', authMiddleware, async (req, res) => {
+  try {
+    const entity = await User.findById(req.user.id, '-passwordHash').lean();
+    const payments = await Payment.find({ userId: req.user.id }).lean();
+    const notices = await Notice.find({ userId: req.user.id }).lean();
+
+    const overdue = payments.filter(p => p.status === 'overdue');
+    const due = payments.filter(p => p.status === 'due');
+
+    res.json({
+      entity, overallStatus: overdue.length === 0 ? 'Compliant' : 'Non-Compliant',
+      payments, notices,
+      summary: {
+        totalPaid: payments.filter(p => p.status === 'paid').reduce((s,p) => s + p.amount, 0),
+        totalOutstanding: [...overdue, ...due].reduce((s,p) => s + p.amount, 0),
+        overdueCount: overdue.length, dueCount: due.length
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Feedback
+router.post('/feedback', authMiddleware, async (req, res) => {
+  try {
+    const { entityName, entityType, category, rating, easeRating, speedRating, supportRating, deadlineRating, comment } = req.body;
+    if (!rating) return res.status(400).json({ error: 'Rating is required.' });
+
+    const newFeedback = await Feedback.create({
+      userId: req.user.id, entityName, entityType, category, rating, easeRating, speedRating, supportRating, deadlineRating, comment
+    });
+
+    res.status(201).json({ message: 'Feedback submitted.', feedback: newFeedback });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/feedback', authMiddleware, async (req, res) => {
+  try {
+    const feedbacks = await Feedback.find().sort({ createdAt: -1 }).lean();
+    if (!feedbacks.length) return res.json({ count: 0, averageRating: 0, distribution: {}, feedback: [] });
+
+    const avg = feedbacks.reduce((s, f) => s + f.rating, 0) / feedbacks.length;
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    feedbacks.forEach(f => { distribution[f.rating] = (distribution[f.rating] || 0) + 1; });
+
+    const total = feedbacks.length;
+    const distPct = {};
+    Object.entries(distribution).forEach(([k, v]) => { distPct[k] = Math.round((v / total) * 100); });
+
+    res.json({
+      count: total, averageRating: Math.round(avg * 10) / 10,
+      distribution: distPct, feedback: feedbacks
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Forms
+router.get('/forms', authMiddleware, (req, res) => {
   res.json({ forms: [
     { id: 'UTAPS-01', name: 'Corporate Income Tax Return', description: 'For all registered companies in Umuahia Metropolis.', frequency: 'Annual', mandatory: true },
     { id: 'UTAPS-02', name: 'PAYE Remittance Schedule', description: 'For employers with monthly staff payroll.', frequency: 'Monthly', mandatory: true },
@@ -633,32 +475,21 @@ router.get('/forms', (req, res) => {
   ]});
 });
 
-/* ── Mount router ───────────────────────────────── */
 app.use('/api', router);
-
-/* ── SPA catch-all ──────────────────────────────── */
 app.get('/{*path}', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
+  res.sendFile(path.join(__dirname, '../UTAPS/index.html'));
 });
 
-/* ── Error handler ──────────────────────────────── */
 app.use((err, req, res, next) => {
   console.error('UTAPS Error:', err.message);
   res.status(500).json({ error: 'Internal server error. Please contact UTAPS support.' });
 });
 
-/* ── Start ──────────────────────────────────────── */
-seedData();
-
 app.listen(PORT, () => {
   console.log(`\n╔══════════════════════════════════════════╗`);
-  console.log(`║  TaxUmuahia · UTAPS Backend              ║`);
-  console.log(`║  Umuahia Tax Automation & Payment System ║`);
+  console.log(`║  TaxUmuahia · UTAPS Backend (MongoDB)    ║`);
   console.log(`║  Running on http://localhost:${PORT}         ║`);
   console.log(`╚══════════════════════════════════════════╝\n`);
-  console.log(`  API Base:  http://localhost:${PORT}/api`);
-  console.log(`  Frontend:  http://localhost:${PORT}`);
-  console.log(`  Health:    http://localhost:${PORT}/api/health\n`);
 });
 
 module.exports = app;
