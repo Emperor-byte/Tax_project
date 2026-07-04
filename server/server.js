@@ -18,9 +18,33 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../UTAPS')));
 
 // MongoDB Connection
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+let isConnected = false;
+
+if (process.env.VERCEL && !process.env.MONGODB_URI) {
+  console.error('❌ CRITICAL: MONGODB_URI environment variable is missing in Vercel!');
+}
+
+mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
+  .then(() => {
+    isConnected = true;
+    console.log('✅ Connected to MongoDB');
+  })
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err);
+  });
+
+// Global middleware to fail fast if DB is not connected
+app.use((req, res, next) => {
+  // If running on Vercel and we don't have a URI, fail immediately
+  if (process.env.VERCEL && !process.env.MONGODB_URI) {
+    return res.status(500).json({ error: 'Server configuration error: MONGODB_URI is not set in Vercel Environment Variables.' });
+  }
+  // If mongoose is not connected yet, wait or fail
+  if (mongoose.connection.readyState !== 1 && req.path.startsWith('/api')) {
+    return res.status(500).json({ error: 'Database connection error. Please try again or check server logs.' });
+  }
+  next();
+});
 
 // Schemas
 const userSchema = new mongoose.Schema({
