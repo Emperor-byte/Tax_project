@@ -1379,33 +1379,112 @@ input, select, textarea { font-family: var(--font); }
 
 .footer-copy { font-size: 11.5px; color: rgba(255,255,255,.35); }
 
+/* ── Mobile actions ── */
+.mobile-only-actions {
+  display: none;
+}
+
 /* ═══════════════════════ RESPONSIVE ═══════════════════════ */
 @media (max-width: 1024px) {
   .topnav-links .nav-link span { display: none; }
   .pay-layout { grid-template-columns: 1fr; }
   .feedback-layout { grid-template-columns: 1fr; }
-  .status-table-head, .status-table-row { grid-template-columns: 2fr 1fr 1fr 1.2fr; }
-  .status-table-head span:nth-child(3),
-  .status-table-row span:nth-child(3)  { display: none; }
+  /* Ensure status table scrolls horizontally on tablets instead of breaking grid columns */
+  .status-table-wrap { overflow-x: auto; }
+  .status-table-head, .status-table-row { min-width: 720px; }
 }
 
 @media (max-width: 768px) {
   :root { --nav-h: 58px; }
   .topnav-links, .topnav-actions { display: none; }
   .nav-hamburger { display: flex; }
-  .topnav-links.mobile-open { display: flex; flex-direction: column; position: fixed; top: var(--nav-h); left: 0; right: 0; background: var(--navy); padding: 1rem 1.75rem; gap: 4px; z-index: 199; }
+  
+  /* Mobile Navigation Menu */
+  .topnav-links.mobile-open { 
+    display: flex; 
+    flex-direction: column; 
+    position: fixed; 
+    top: var(--nav-h); 
+    left: 0; 
+    right: 0; 
+    background: var(--navy); 
+    padding: 1.25rem 1.75rem; 
+    gap: 6px; 
+    z-index: 199;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-height: calc(100vh - var(--nav-h));
+    overflow-y: auto;
+  }
   .topnav-links.mobile-open .nav-link span { display: inline; }
+  
+  /* Mobile-only actions (Sign in / Register buttons in menu) */
+  .topnav-links.mobile-open .mobile-only-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.15);
+  }
+  .topnav-links.mobile-open .mobile-only-actions button {
+    width: 100%;
+    text-align: center;
+    padding: 9px 16px;
+  }
+
   .hero-wrap { grid-template-columns: 1fr; padding: 2rem 1.25rem; }
-  .hero-side { display: none; }
+  /* Don't hide hero-side (Quick status check and account box), stack it below hero content */
+  .hero-side { display: block; width: 100%; margin-top: 1.5rem; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .two-col   { grid-template-columns: 1fr; }
   .form-row  { grid-template-columns: 1fr; }
   .pay-methods { grid-template-columns: repeat(2,1fr); }
   .section-block { padding: 1.5rem 1.25rem; }
   .deadline-inner { flex-direction: column; align-items: flex-start; gap: 6px; }
-  .status-table-head, .status-table-row { grid-template-columns: 2fr 1.2fr 1.2fr .8fr; }
-  .status-table-head span:nth-child(2),
-  .status-table-row span:nth-child(2) { display: none; }
+  
+  /* Convert Table to Card List on mobile screens */
+  .status-table-head { display: none; }
+  .status-table-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    border-bottom: 2px solid var(--border);
+    gap: 10px;
+    min-width: 0;
+  }
+  .status-table-row > span {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+  .status-table-row > span:nth-child(1) {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy);
+    display: block;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--bg-subtle);
+    padding-bottom: 6px;
+  }
+  .status-table-row > span:nth-child(2)::before { content: "Filing Period:"; color: var(--text-muted); font-size: 12px; }
+  .status-table-row > span:nth-child(3)::before { content: "Amount:"; color: var(--text-muted); font-size: 12px; }
+  .status-table-row > span:nth-child(4)::before { content: "Due / Paid Date:"; color: var(--text-muted); font-size: 12px; }
+  .status-table-row > span:nth-child(5)::before { content: "Status:"; color: var(--text-muted); font-size: 12px; }
+  .status-table-row > .status-pill {
+    margin-left: 0;
+  }
+  .status-table-row > button.btn-tbl {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 6px;
+    text-align: center;
+  }
   .hero-h1 { font-size: 28px; }
 }
 

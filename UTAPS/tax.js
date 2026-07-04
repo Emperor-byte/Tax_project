@@ -56,15 +56,15 @@ function loadSession() {
 }
 
 function updateNavForAuth() {
-  const loginBtn  = document.querySelector('.btn-nav-login');
-  const signupBtn = document.querySelector('.btn-nav-signup');
+  const loginBtns  = document.querySelectorAll('.btn-nav-login');
+  const signupBtns = document.querySelectorAll('.btn-nav-signup');
 
   if (isLoggedIn() && currentUser) {
-    if (loginBtn) {
+    loginBtns.forEach(loginBtn => {
       loginBtn.textContent = currentUser.contactPerson || currentUser.bizName || 'My account';
       loginBtn.onclick = () => showSection('status');
-    }
-    if (signupBtn) {
+    });
+    signupBtns.forEach(signupBtn => {
       signupBtn.textContent = 'Sign out';
       signupBtn.style.background = 'rgba(255,255,255,.2)';
       signupBtn.style.color = '#fff';
@@ -73,15 +73,18 @@ function updateNavForAuth() {
         updateNavForAuth();
         showSection('home');
       };
-    }
+    });
   } else {
-    if (loginBtn) { loginBtn.textContent = 'Sign in'; loginBtn.onclick = () => showSection('login'); }
-    if (signupBtn) {
+    loginBtns.forEach(loginBtn => {
+      loginBtn.textContent = 'Sign in';
+      loginBtn.onclick = () => showSection('login');
+    });
+    signupBtns.forEach(signupBtn => {
       signupBtn.textContent = 'Register';
       signupBtn.style.background = '';
       signupBtn.style.color = '';
       signupBtn.onclick = () => showSection('register');
-    }
+    });
   }
 }
 
