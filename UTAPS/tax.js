@@ -68,15 +68,21 @@ function updateNavForAuth() {
   const protectedLinks = document.querySelectorAll('.protected-link');
   const adminLinks = document.querySelectorAll('.admin-link');
 
+  const heroRegBtn = document.getElementById('hero-reg-btn');
+  const heroAnalyticsBtn = document.getElementById('hero-analytics-btn');
+  const quickCheckerCard = document.getElementById('home-quick-checker-card');
+  const tabRegEnt = document.getElementById('tab-register-enterprise');
+  const tabFileRet = document.getElementById('tab-file-returns');
+
   if (isLoggedIn() && currentUser) {
     loginBtns.forEach(loginBtn => {
-      loginBtn.textContent = currentUser.contactPerson || currentUser.bizName || 'My account';
-      loginBtn.onclick = () => showSection('status');
+      loginBtn.style.display = 'none';
     });
     signupBtns.forEach(signupBtn => {
       signupBtn.textContent = 'Sign out';
       signupBtn.style.background = 'rgba(255,255,255,.2)';
       signupBtn.style.color = '#fff';
+      signupBtn.style.display = 'flex';
       signupBtn.onclick = () => {
         clearSession();
         updateNavForAuth();
@@ -85,19 +91,47 @@ function updateNavForAuth() {
     });
     protectedLinks.forEach(link => link.style.display = 'flex');
     adminLinks.forEach(link => link.style.display = currentUser.role === 'admin' ? 'flex' : 'none');
+
+    // Homepage items visibility logic
+    if (heroRegBtn) heroRegBtn.style.display = 'none';
+    if (quickCheckerCard) quickCheckerCard.style.display = 'none';
+    if (heroAnalyticsBtn) {
+      heroAnalyticsBtn.style.display = currentUser.role === 'admin' ? 'inline-flex' : 'none';
+    }
+
+    // Hide Register Enterprise tab and auto-switch to File Returns
+    if (tabRegEnt) {
+      tabRegEnt.style.display = 'none';
+      if (tabRegEnt.classList.contains('active') && tabFileRet) {
+        tabFileRet.click();
+      }
+    }
   } else {
     loginBtns.forEach(loginBtn => {
       loginBtn.textContent = 'Sign in';
+      loginBtn.style.display = 'flex';
       loginBtn.onclick = () => showSection('login');
     });
     signupBtns.forEach(signupBtn => {
       signupBtn.textContent = 'Register';
       signupBtn.style.background = '';
       signupBtn.style.color = '';
+      signupBtn.style.display = 'flex';
       signupBtn.onclick = () => showSection('register');
     });
     protectedLinks.forEach(link => link.style.display = 'none');
     adminLinks.forEach(link => link.style.display = 'none');
+
+    // Homepage items visibility logic
+    if (heroRegBtn) heroRegBtn.style.display = 'inline-flex';
+    if (quickCheckerCard) quickCheckerCard.style.display = 'block';
+    if (heroAnalyticsBtn) heroAnalyticsBtn.style.display = 'none';
+
+    // Show Register Enterprise tab
+    if (tabRegEnt) {
+      tabRegEnt.style.display = 'inline-block';
+      tabRegEnt.click();
+    }
   }
 }
 
