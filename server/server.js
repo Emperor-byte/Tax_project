@@ -29,8 +29,26 @@ app.use(express.static(path.join(__dirname, '../UTAPS')));
    FILE-BASED DATABASE (JSON flat files — no native modules)
    ════════════════════════════════════════════════════ */
 
-const DB_DIR = path.join(__dirname, 'db');
+const isVercel = process.env.VERCEL;
+const DB_DIR = isVercel ? '/tmp/db' : path.join(__dirname, 'db');
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+
+// Copy seed files to /tmp/db on Vercel so demo data is available
+if (isVercel) {
+  const srcDir = path.join(process.cwd(), 'server', 'db');
+  ['users', 'payments', 'feedback', 'notices'].forEach(name => {
+    const srcFile = path.join(srcDir, name + '.json');
+    const destFile = path.join(DB_DIR, name + '.json');
+    if (!fs.existsSync(destFile) && fs.existsSync(srcFile)) {
+      try {
+        fs.copyFileSync(srcFile, destFile);
+      } catch (err) {
+        console.error(`Failed to copy seed file ${name}:`, err);
+      }
+    }
+  });
+}
+
 
 function dbPath(name) { return path.join(DB_DIR, name + '.json'); }
 
