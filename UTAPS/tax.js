@@ -20,6 +20,14 @@ async function apiRequest(method, endpoint, body = null, requiresAuth = false) {
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(API + endpoint, opts);
+
+  // Check if response is JSON
+  const contentType = res.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await res.text();
+    throw new Error(text || `Server error: ${res.status} ${res.statusText}`);
+  }
+
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
