@@ -251,19 +251,57 @@ router.post('/auth/register', (req, res) => {
 router.post('/auth/login', (req, res) => {
   const { tin, password } = req.body;
 
-  if (!tin || !password) {
-    return res.status(400).json({ error: 'TIN/email and password are required.' });
+  if (!tin) {
+    return res.status(400).json({ error: 'TIN or email is required.' });
   }
 
   const users = readDB('users');
-  const user  = users.find(u =>
+  let user = users.find(u =>
     u.tin === tin.trim() || u.email?.toLowerCase() === tin.toLowerCase().trim()
   );
 
-  if (!user || !verifyPassword(password, user.passwordHash)) {
-    return res.status(401).json({ error: 'Invalid TIN/email or password.' });
+  // Demo behavior: if user doesn't exist, create a dynamic profile on the fly
+  if (!user) {
+    const id = nextId(users);
+    const utapsId = `UTAPS-2026-${String(id).padStart(4, '0')}`;
+    const cleanTin = tin.trim();
+    const isEmail = cleanTin.includes('@');
+
+    user = {
+      id,
+      tin: cleanTin,
+      bizName: isEmail ? cleanTin.split('@')[0].toUpperCase() + ' ENTERPRISES LTD' : 'UMUAHIA BUSINESS CENTRE LTD',
+      entityType: 'Company / Corporation',
+      address: 'No. 15 Owerri Road, Umuahia Metropolis',
+      email: isEmail ? cleanTin.toLowerCase() : `demo_user_${id}@utaps-demo.gov.ng`,
+      phone: '080' + String(Math.floor(1000000 + Math.random() * 9000000)),
+      rcNumber: 'RC-' + String(Math.floor(100000 + Math.random() * 900000)),
+      annualTurnover: 7500000,
+      employees: 18,
+      contactPerson: isEmail ? cleanTin.split('@')[0] : 'Demo User',
+      role: 'Managing Director',
+      passwordHash: hashPassword(password || 'demo1234'),
+      utapsId,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
+
+    users.push(user);
+    writeDB('users', users);
+
+    // Seed default payment history so the user has visual analytics and details to see
+    const payments = readDB('payments');
+    const pid = nextId(payments);
+    const newPayments = [
+      { id: pid,     userId: id, taxType: 'Corporate Income Tax', period: '2025', amount: 150000, assessmentRef: `ASS/2025/CIT/${1000 + id}`, method: 'Remita', status: 'paid', paidAt: new Date().toISOString(), receiptNo: `UTAPS-REC-${Date.now()}` },
+      { id: pid + 1, userId: id, taxType: 'PAYE Q1 2026',         period: 'Q1 2026', amount: 35000, assessmentRef: `ASS/2026/PAYE/${2000 + id}`, method: null, status: 'overdue', dueDate: '2026-04-30', paidAt: null, receiptNo: null },
+      { id: pid + 2, userId: id, taxType: 'PAYE Q2 2026',         period: 'Q2 2026', amount: 35000, assessmentRef: `ASS/2026/PAYE/${3000 + id}`, method: null, status: 'due', dueDate: '2026-06-30', paidAt: null, receiptNo: null }
+    ];
+    payments.push(...newPayments);
+    writeDB('payments', payments);
   }
 
+  // Generate JWT and log user in successfully (any password works in this demo)
   const { passwordHash, ...safeUser } = user;
   const token = signToken(user);
 
