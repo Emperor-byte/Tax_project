@@ -1,0 +1,89 @@
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "taxType": "Corporate Income Tax",
+    "period": "2025",
+    "amount": 120000,
+    "assessmentRef": "ASS/2025/CIT/0041",
+    "method": "Remita",
+    "status": "paid",
+    "paidAt": "2026-03-20T00:00:00.000Z",
+    "receiptNo": "UTAPS-REC-20260320-0041"
+  },
+  {
+    "id": 2,
+    "userId": 1,
+    "taxType": "PAYE Q1 2026",
+    "period": "Q1 2026",
+    "amount": 45000,
+    "assessmentRef": "ASS/2026/PAYE/0091",
+    "method": "Bank transfer",
+    "status": "overdue",
+    "dueDate": "2026-04-30",
+    "paidAt": null,
+    "receiptNo": null
+  },
+  {
+    "id": 3,
+    "userId": 1,
+    "taxType": "PAYE Q2 2026",
+    "period": "Q2 2026",
+    "amount": 45000,
+    "assessmentRef": "ASS/2026/PAYE/0092",
+    "method": null,
+    "status": "due",
+    "dueDate": "2026-06-30",
+    "paidAt": null,
+    "receiptNo": null
+  },
+  {
+    "id": 4,
+    "userId": 1,
+    "taxType": "Business Premises Levy",
+    "period": "2026",
+    "amount": 25000,
+    "assessmentRef": "ASS/2026/BPL/0012",
+    "method": null,
+    "status": "upcoming",
+    "dueDate": "2026-09-30",
+    "paidAt": null,
+    "receiptNo": null
+  },
+  {
+    "id": 5,
+    "userId": 2,
+    "taxType": "Corporate Income Tax",
+    "period": "2025",
+    "amount": 850000,
+    "assessmentRef": "ASS/2025/CIT/0012",
+    "method": "Remita",
+    "status": "paid",
+    "paidAt": "2026-02-28T00:00:00.000Z",
+    "receiptNo": "UTAPS-REC-20260228-0012"
+  },
+  {
+    "id": 6,
+    "userId": 2,
+    "taxType": "PAYE Q1 2026",
+    "period": "Q1 2026",
+    "amount": 320000,
+    "assessmentRef": "ASS/2026/PAYE/0033",
+    "method": "Remita",
+    "status": "paid",
+    "paidAt": "2026-04-15T00:00:00.000Z",
+    "receiptNo": "UTAPS-REC-20260415-0033"
+  },
+  {
+    "id": 7,
+    "userId": 1,
+    "taxType": "50000",
+    "period": "2026",
+    "amount": 20000,
+    "assessmentRef": "ASS/2026/2362",
+    "method": "USSD / mobile",
+    "status": "paid",
+    "paidAt": "2026-06-27T08:24:45.387Z",
+    "receiptNo": "UTAPS-REC-20260627-0007"
+  }
+]

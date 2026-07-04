@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "type": "penalty",
+    "paymentId": 2,
+    "title": "PAYE Q1 2026 Overdue",
+    "body": "Your PAYE Q1 2026 remittance of ₦45,000 is overdue. Penalty of 10% applies.",
+    "issuedAt": "2026-05-10T00:00:00.000Z",
+    "noticeRef": "UTAPS/2026/PEN/00412"
+  }
+]

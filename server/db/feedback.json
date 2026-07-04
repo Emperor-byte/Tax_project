@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "userId": 2,
+    "entityName": "First Trust Microfinance Bank",
+    "entityType": "Bank / Financial Institution",
+    "category": "Payment process",
+    "rating": 5,
+    "easeRating": 5,
+    "speedRating": 4,
+    "supportRating": 5,
+    "deadlineRating": 4,
+    "comment": "The payment portal is much easier than the old process. Quick receipt issuance.",
+    "createdAt": "2026-06-15T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "userId": null,
+    "entityName": "Sunrise Academy",
+    "entityType": "School / Educational Institution",
+    "category": "Portal usability",
+    "rating": 3,
+    "easeRating": 3,
+    "speedRating": 3,
+    "supportRating": 4,
+    "deadlineRating": 3,
+    "comment": "Wish the education levy section was more clearly labelled. Otherwise smooth.",
+    "createdAt": "2026-06-02T00:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "userId": null,
+    "entityName": "Anonymous",
+    "entityType": "",
+    "category": "General",
+    "rating": 3,
+    "easeRating": 0,
+    "speedRating": 0,
+    "supportRating": 0,
+    "deadlineRating": 0,
+    "comment": "",
+    "createdAt": "2026-06-27T08:23:28.796Z"
+  },
+  {
+    "id": 4,
+    "userId": null,
+    "entityName": "Anonymous",
+    "entityType": "Company / Corporation",
+    "category": "General",
+    "rating": 4,
+    "easeRating": 4,
+    "speedRating": 2,
+    "supportRating": 3,
+    "deadlineRating": 5,
+    "comment": "iv vb7t f tv   f",
+    "createdAt": "2026-06-27T12:56:42.419Z"
+  },
+  {
+    "id": 5,
+    "userId": null,
+    "entityName": "GD entrprise",
+    "entityType": "Hospital / Clinic",
+    "category": "General",
+    "rating": 4,
+    "easeRating": 4,
+    "speedRating": 2,
+    "supportRating": 3,
+    "deadlineRating": 5,
+    "comment": "iv vb7t f tv   f",
+    "createdAt": "2026-06-27T12:57:05.269Z"
+  }
+]

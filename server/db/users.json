@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "tin": "12345678-0001",
+    "bizName": "Sunshine Medical Centre Ltd",
+    "entityType": "Hospital / Clinic",
+    "address": "No. 5 Owerri Road, Umuahia Metropolis",
+    "email": "admin@sunshinemedical.ng",
+    "phone": "08012345678",
+    "rcNumber": "RC-0012345",
+    "annualTurnover": 5000000,
+    "employees": 45,
+    "contactPerson": "Dr. Emeka Obi",
+    "role": "Medical Director",
+    "passwordHash": "52e82c4037974dfc448d366ae58cd859:e1bed7d82a9e06cf4eb9831da93d2a3cfc1af2d1b5a49fa67fd0ce3a7eae3b1b391d8676c7b1efa30aa21212a11a3629bcd3452cb6b5929351e2298111da1938",
+    "utapsId": "UTAPS-2026-0001",
+    "status": "active",
+    "createdAt": "2026-01-15T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "tin": "98765432-0001",
+    "bizName": "First Trust Microfinance Bank",
+    "entityType": "Bank / Financial Institution",
+    "address": "Plot 12 Bank Road, Umuahia Metropolis",
+    "email": "compliance@firsttrust.ng",
+    "phone": "08098765432",
+    "rcNumber": "RC-0054321",
+    "annualTurnover": 25000000,
+    "employees": 120,
+    "contactPerson": "Mrs. Adaeze Nwosu",
+    "role": "CFO",
+    "passwordHash": "08543d32c2664beafd6502c1ab45003f:31d118436483b1ad296c0f7fbd94c8447ca12c166a2e74ddd8de6c54ec5815642d351343b1276261ebbc1c3ab46d037b03a56ac8d416e729af792ff92487b43d",
+    "utapsId": "UTAPS-2026-0002",
+    "status": "active",
+    "createdAt": "2026-01-20T00:00:00.000Z"
+  }
+]

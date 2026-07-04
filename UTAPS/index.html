@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UTAPS — Umuahia Tax Automation & Payment System</title>
+  <link rel="stylesheet" href="tax.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
+  <script src="tax.js" defer></script>
+</head>
+<body>
+
+<!-- ══════════════════════ TOP NAV ══════════════════════ -->
+<header class="topnav" id="topnav" role="banner">
+  <div class="topnav-inner">
+
+    <div class="topnav-logo" role="button" tabindex="0" onclick="showSection('home')" onkeydown="if(event.key==='Enter')showSection('home')" aria-label="Go to homepage">
+      <div class="logo-seal" aria-hidden="true">
+        <span class="seal-top">UTAPS</span>
+        <span class="seal-sub">GOV</span>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">TaxUmuahia</span>
+        <span class="logo-full">Umuahia Tax Automation &amp; Payment System</span>
+      </div>
+    </div>
+
+    <nav class="topnav-links" aria-label="Primary navigation" id="main-nav">
+      <a href="#" class="nav-link" data-section="home"       onclick="showSection('home');return false"><i class="ti ti-home-2"></i><span>Home</span></a>
+      <a href="#" class="nav-link" data-section="enterprise" onclick="showSection('enterprise');return false"><i class="ti ti-building"></i><span>Enterprise</span></a>
+      <a href="#" class="nav-link" data-section="legal"      onclick="showSection('legal');return false"><i class="ti ti-scale"></i><span>Legal &amp; Officers</span></a>
+      <a href="#" class="nav-link" data-section="pay"        onclick="showSection('pay');return false"><i class="ti ti-credit-card"></i><span>Pay</span></a>
+      <a href="#" class="nav-link" data-section="status"     onclick="showSection('status');return false"><i class="ti ti-report-analytics"></i><span>Status</span></a>
+      <a href="#" class="nav-link" data-section="analytics"  onclick="showSection('analytics');return false"><i class="ti ti-chart-bar"></i><span>Analytics</span></a>
+      <a href="#" class="nav-link" data-section="feedback"   onclick="showSection('feedback');return false"><i class="ti ti-message-star"></i><span>Feedback</span></a>
+      <a href="#" class="nav-link" data-section="forms"      onclick="showSection('forms');return false"><i class="ti ti-file-text"></i><span>Forms</span></a>
+    </nav>
+
+    <div class="topnav-actions">
+      <div class="nav-search" role="search">
+        <i class="ti ti-search"></i>
+        <input type="search" placeholder="Search UTAPS…" aria-label="Search portal" />
+      </div>
+      <button class="btn-nav-login"  onclick="showSection('login')">Sign in</button>
+      <button class="btn-nav-signup" onclick="showSection('register')">Register</button>
+    </div>
+
+    <button class="nav-hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileNav()">
+      <i class="ti ti-menu-2"></i>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════════════ WARNING BANNER ══════════════════════ -->
+<div class="alert-ribbon" role="alert" aria-live="polite" id="alert-ribbon">
+  <i class="ti ti-alert-triangle"></i>
+  <span><strong>⚠ DEADLINE ALERT:</strong> Q2 2026 Corporate Tax Remittance due <strong>30 June 2026</strong> — 8 days remaining. Penalty: 10% per month on outstanding balance.</span>
+  <a href="#" onclick="showSection('pay');return false" class="ribbon-link">Pay now →</a>
+  <button class="ribbon-close" onclick="document.getElementById('alert-ribbon').style.display='none'" aria-label="Dismiss">&times;</button>
+</div>
+
+<!-- ══════════════════════ MAIN CONTENT ══════════════════════ -->
+<main id="app">
+
+  <!-- ────────────────── HOME ────────────────── -->
+  <section id="section-home" class="page active">
+
+    <div class="hero-wrap">
+      <div class="hero-content">
+        <p class="hero-eyebrow"><i class="ti ti-map-pin"></i> Serving Umuahia Metropolis exclusively</p>
+        <h1 class="hero-h1">Smarter tax management<br><span class="hero-accent">for Umuahia Metropolis</span></h1>
+        <p class="hero-body">UTAPS is the official government platform for tax filing, payment, and compliance for companies, banks, plazas, hospitals, and schools operating in Umuahia Metropolis.</p>
+        <div class="hero-badges">
+          <span class="chip"><i class="ti ti-check"></i> Company Tax</span>
+          <span class="chip"><i class="ti ti-check"></i> Business Premises</span>
+          <span class="chip"><i class="ti ti-check"></i> Education Levy</span>
+          <span class="chip"><i class="ti ti-check"></i> PAYE</span>
+          <span class="chip"><i class="ti ti-check"></i> Hotel Consumption</span>
+        </div>
+        <div class="hero-cta">
+          <button class="btn btn-primary" onclick="showSection('register')"><i class="ti ti-user-plus"></i> Register now</button>
+          <button class="btn btn-outline" onclick="showSection('pay')">Pay taxes</button>
+          <button class="btn btn-ghost" onclick="showSection('analytics')">View analytics</button>
+        </div>
+      </div>
+      <aside class="hero-side">
+        <div class="side-card">
+          <h2 class="side-card-title">Tax Clearance Status</h2>
+          <p class="side-card-sub">Check two ways — no account needed</p>
+          <div class="side-box">
+            <h3><i class="ti ti-user-circle"></i> UTAPS account</h3>
+            <p>Full compliance record, payment history, and email notifications.</p>
+            <button class="btn btn-primary btn-full" onclick="showSection('login')">Sign in</button>
+          </div>
+          <div class="side-box">
+            <h3><i class="ti ti-search"></i> Quick checker</h3>
+            <p>Enter your TIN and tax year. Instant status. No sign-in required.</p>
+            <button class="btn btn-outline btn-full" onclick="showSection('status')">Check clearance</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Deadline strip -->
+    <div class="deadline-strip">
+      <div class="deadline-inner">
+        <span class="dl-label"><i class="ti ti-clock"></i> Deadlines</span>
+        <div class="dl-item"><span class="dot dot-red"></span> Q2 Corporate Tax <strong class="dl-urgent">Jun 30 — 8 days</strong></div>
+        <div class="dl-item"><span class="dot dot-amber"></span> Annual Returns (Companies) <strong class="dl-soon">Jul 31 — 39 days</strong></div>
+        <div class="dl-item"><span class="dot dot-green"></span> Business Premises Renewal <strong class="dl-ok">Sep 30</strong></div>
+        <div class="dl-item"><span class="dot dot-green"></span> Hotel Consumption Levy Q3 <strong class="dl-ok">Oct 15</strong></div>
+      </div>
+    </div>
+
+    <!-- Entity cards -->
+    <div class="section-block">
+      <div class="section-header">
+        <h2>Who do you represent?</h2>
+        <p>Select your entity type to access the correct filing interface</p>
+      </div>
+      <div class="entity-grid">
+        <div class="entity-card" tabindex="0" role="button" onclick="showSection('enterprise')" onkeydown="handleCard(event,'enterprise')">
+          <div class="ec-icon blue"><i class="ti ti-building-factory-2"></i></div>
+          <h3>Companies &amp; Corporations</h3>
+          <p>Corporate income tax, withholding tax, and annual returns.</p>
+          <span class="tag tag-red">Required annually</span>
+        </div>
+        <div class="entity-card" tabindex="0" role="button" onclick="showSection('enterprise')" onkeydown="handleCard(event,'enterprise')">
+          <div class="ec-icon green"><i class="ti ti-building-bank"></i></div>
+          <h3>Banks &amp; Financial Institutions</h3>
+          <p>Revenue remittance and banking sector compliance filings.</p>
+          <span class="tag tag-red">Quarterly filing</span>
+        </div>
+        <div class="entity-card" tabindex="0" role="button" onclick="showSection('enterprise')" onkeydown="handleCard(event,'enterprise')">
+          <div class="ec-icon amber"><i class="ti ti-building-store"></i></div>
+          <h3>Plazas &amp; Shopping Centres</h3>
+          <p>Business premises levy and commercial property assessments.</p>
+          <span class="tag tag-green">Online filing live</span>
+        </div>
+        <div class="entity-card" tabindex="0" role="button" onclick="showSection('enterprise')" onkeydown="handleCard(event,'enterprise')">
+          <div class="ec-icon coral"><i class="ti ti-building-hospital"></i></div>
+          <h3>Hospitals &amp; Clinics</h3>
+          <p>Healthcare levies, PAYE for medical staff, compliance returns.</p>
+          <span class="tag tag-red">Required annually</span>
+        </div>
+        <div class="entity-card" tabindex="0" role="button" onclick="showSection('enterprise')" onkeydown="handleCard(event,'enterprise')">
+          <div class="ec-icon purple"><i class="ti ti-school"></i></div>
+          <h3>Schools &amp; Institutions</h3>
+          <p>Education levy, PAYE for staff, private school tax filings.</p>
+          <span class="tag tag-red">Required annually</span>
+        </div>
+        <div class="entity-card" tabindex="0" role="button" onclick="showSection('legal')" onkeydown="handleCard(event,'legal')">
+          <div class="ec-icon teal"><i class="ti ti-scale"></i></div>
+          <h3>Lawyers &amp; Law Firms</h3>
+          <p>Professional services tax and legal practitioners levy.</p>
+          <span class="tag tag-green">e-Filing enabled</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── LOGIN ────────────────── -->
+  <section id="section-login" class="page auth-page">
+    <div class="auth-wrap">
+      <div class="auth-brand">
+        <div class="auth-logo-mark">UT</div>
+        <span class="auth-brand-name">TaxUmuahia · UTAPS</span>
+      </div>
+      <div class="auth-card">
+        <h1 class="auth-title">Sign in to UTAPS</h1>
+        <p class="auth-sub">Access your tax records, file returns, and make payments for Umuahia Metropolis.</p>
+
+        <div class="form-group">
+          <label for="login-tin">TIN or Email address</label>
+          <div class="input-icon-wrap">
+            <i class="ti ti-id-badge-2"></i>
+            <input id="login-tin" type="text" placeholder="12345678-0001 or admin@company.com" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="login-pass">Password</label>
+          <div class="input-icon-wrap">
+            <i class="ti ti-lock"></i>
+            <input id="login-pass" type="password" placeholder="Enter your password" />
+            <button class="toggle-pass" type="button" onclick="togglePassword('login-pass',this)" aria-label="Show password"><i class="ti ti-eye"></i></button>
+          </div>
+        </div>
+        <div class="auth-row">
+          <label class="checkbox-label"><input type="checkbox" /> Remember me</label>
+          <a href="#" class="auth-link">Forgot password?</a>
+        </div>
+        <button class="btn btn-primary btn-full auth-submit" id="login-submit-btn" onclick="handleLogin()">
+          <i class="ti ti-login"></i> Sign in
+        </button>
+        <div id="login-error" class="auth-error" hidden></div>
+        <div class="auth-divider"><span>or</span></div>
+        <button class="btn btn-outline btn-full" onclick="showSection('register')">Create a new account</button>
+        <p class="auth-note"><i class="ti ti-shield-lock"></i> Secured by the Abia State Government. All data is encrypted.</p>
+      </div>
+      <button class="auth-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back to portal</button>
+    </div>
+  </section>
+
+  <!-- ────────────────── REGISTER ────────────────── -->
+  <section id="section-register" class="page auth-page">
+    <div class="auth-wrap auth-wrap-wide">
+      <div class="auth-brand">
+        <div class="auth-logo-mark">UT</div>
+        <span class="auth-brand-name">TaxUmuahia · UTAPS</span>
+      </div>
+      <div class="auth-card">
+        <h1 class="auth-title">Create your UTAPS account</h1>
+        <p class="auth-sub">Register your enterprise for tax filing in Umuahia Metropolis. All entities operating within the metropolis must be registered.</p>
+
+        <!-- Step indicator -->
+        <div class="reg-steps">
+          <div class="reg-step active" id="rstep-1"><span class="step-num">1</span><span class="step-label">Entity details</span></div>
+          <div class="reg-step-divider"></div>
+          <div class="reg-step" id="rstep-2"><span class="step-num">2</span><span class="step-label">Contact &amp; access</span></div>
+          <div class="reg-step-divider"></div>
+          <div class="reg-step" id="rstep-3"><span class="step-num">3</span><span class="step-label">Confirm</span></div>
+        </div>
+
+        <!-- Step 1 -->
+        <div id="reg-step-1" class="reg-panel">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-bizname">Business / Entity Name <span class="req">*</span></label>
+              <input id="reg-bizname" type="text" placeholder="e.g. Sunshine Medical Centre Ltd" />
+            </div>
+            <div class="form-group">
+              <label for="reg-tin">Tax Identification Number (TIN) <span class="req">*</span></label>
+              <input id="reg-tin" type="text" placeholder="12345678-0001" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-entity">Entity Type <span class="req">*</span></label>
+              <select id="reg-entity">
+                <option value="">Select entity type…</option>
+                <option>Company / Corporation</option>
+                <option>Bank / Financial Institution</option>
+                <option>Shopping Plaza</option>
+                <option>Hospital / Clinic</option>
+                <option>School / Educational Institution</option>
+                <option>Law Firm</option>
+                <option>Individual / Sole Proprietor</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="reg-rc">CAC RC Number</label>
+              <input id="reg-rc" type="text" placeholder="RC-0000000" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="reg-address">Business Address in Umuahia Metropolis <span class="req">*</span></label>
+            <input id="reg-address" type="text" placeholder="No. 5 Owerri Road, Umuahia Metropolis" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-turnover">Annual Turnover (₦)</label>
+              <input id="reg-turnover" type="number" placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label for="reg-employees">Number of Employees</label>
+              <input id="reg-employees" type="number" placeholder="0" />
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="regNext(2)">Next: Contact details <i class="ti ti-arrow-right"></i></button>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="reg-step-2" class="reg-panel" hidden>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-contact">Contact Person Full Name <span class="req">*</span></label>
+              <input id="reg-contact" type="text" placeholder="Chukwuemeka Obi" />
+            </div>
+            <div class="form-group">
+              <label for="reg-role">Role / Designation</label>
+              <input id="reg-role" type="text" placeholder="Managing Director, CFO…" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-email">Email Address <span class="req">*</span></label>
+              <input id="reg-email" type="email" placeholder="admin@company.com" />
+            </div>
+            <div class="form-group">
+              <label for="reg-phone">Phone Number <span class="req">*</span></label>
+              <input id="reg-phone" type="tel" placeholder="080XXXXXXXX" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-pass">Create Password <span class="req">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="ti ti-lock"></i>
+                <input id="reg-pass" type="password" placeholder="Min. 8 characters" />
+                <button class="toggle-pass" type="button" onclick="togglePassword('reg-pass',this)" aria-label="Show password"><i class="ti ti-eye"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="reg-pass2">Confirm Password <span class="req">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="ti ti-lock-check"></i>
+                <input id="reg-pass2" type="password" placeholder="Repeat password" />
+              </div>
+            </div>
+          </div>
+          <label class="checkbox-label" style="margin-bottom:16px">
+            <input type="checkbox" id="reg-terms" />
+            I agree to the <a href="#" class="auth-link">UTAPS Terms of Use</a> and confirm this entity operates within <strong>Umuahia Metropolis</strong>.
+          </label>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-ghost" onclick="regNext(1)"><i class="ti ti-arrow-left"></i> Back</button>
+            <button class="btn btn-primary" onclick="regNext(3)">Review &amp; confirm <i class="ti ti-arrow-right"></i></button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div id="reg-step-3" class="reg-panel" hidden>
+          <div class="confirm-box">
+            <h3><i class="ti ti-clipboard-check"></i> Review your registration</h3>
+            <div class="confirm-row"><span>Entity</span><strong id="conf-entity">—</strong></div>
+            <div class="confirm-row"><span>TIN</span><strong id="conf-tin">—</strong></div>
+            <div class="confirm-row"><span>Address</span><strong id="conf-addr">—</strong></div>
+            <div class="confirm-row"><span>Contact</span><strong id="conf-contact">—</strong></div>
+            <div class="confirm-row"><span>Email</span><strong id="conf-email">—</strong></div>
+          </div>
+          <div class="alert-panel alert-info" style="margin-top:14px">
+            <i class="ti ti-info-circle"></i> After submission, a verification link will be sent to your email. Your UTAPS ID will be issued within 24 hours.
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button class="btn btn-ghost" onclick="regNext(2)"><i class="ti ti-arrow-left"></i> Back</button>
+            <button class="btn btn-primary" id="reg-submit-btn" onclick="handleRegister()"><i class="ti ti-check"></i> Submit registration</button>
+          </div>
+          <div id="reg-success" class="auth-success" hidden>
+            <i class="ti ti-circle-check"></i> Registration submitted! Check your email for verification.
+          </div>
+        </div>
+      </div>
+      <button class="auth-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back to portal</button>
+    </div>
+  </section>
+
+  <!-- ────────────────── ENTERPRISE ────────────────── -->
+  <section id="section-enterprise" class="page">
+    <div class="section-block">
+      <div class="page-header">
+        <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <h1>Enterprise Filing Portal</h1>
+          <p>Companies, Banks, Plazas, Hospitals &amp; Schools — Umuahia Metropolis</p>
+        </div>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" onclick="switchTab(this,'et1')">Register Enterprise</button>
+        <button class="tab" role="tab" onclick="switchTab(this,'et2')">File Returns</button>
+        <button class="tab" role="tab" onclick="switchTab(this,'et3')">Compliance Status</button>
+        <button class="tab" role="tab" onclick="switchTab(this,'et4')">Tax Clearance</button>
+      </div>
+
+      <div id="et1" class="tab-panel form-card">
+        <h2 class="form-title"><i class="ti ti-building"></i> Register your enterprise</h2>
+        <div class="form-row">
+          <div class="form-group"><label>Business Name</label><input type="text" placeholder="e.g. Aba Medical Centre Ltd" /></div>
+          <div class="form-group"><label>TIN</label><input type="text" placeholder="12345678-0001" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Entity Type</label>
+            <select><option value="">Select…</option><option>Company / Corporation</option><option>Bank / Financial Institution</option><option>Shopping Plaza</option><option>Hospital / Clinic</option><option>School / Educational Institution</option><option>Law Firm</option></select>
+          </div>
+          <div class="form-group"><label>CAC RC Number</label><input type="text" placeholder="RC-0000000" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Business Address in Umuahia Metropolis</label><input type="text" placeholder="No. 5 Owerri Road, Umuahia Metropolis" /></div>
+          <div class="form-group"><label>Phone</label><input type="tel" placeholder="080XXXXXXXX" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Email</label><input type="email" placeholder="admin@company.com" /></div>
+          <div class="form-group"><label>Annual Turnover (₦)</label><input type="number" placeholder="0.00" /></div>
+        </div>
+        <button class="btn btn-primary">Register &amp; proceed <i class="ti ti-arrow-right"></i></button>
+      </div>
+
+      <div id="et2" class="tab-panel form-card" hidden>
+        <h2 class="form-title"><i class="ti ti-file-invoice"></i> File returns</h2>
+        <div class="form-row">
+          <div class="form-group"><label>TIN</label><input type="text" placeholder="12345678-0001" /></div>
+          <div class="form-group"><label>Filing Year</label><select><option>2026</option><option>2025</option><option>2024</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Return Type</label>
+            <select><option>Corporate Income Tax Return</option><option>PAYE Annual Return</option><option>Withholding Tax Return</option><option>Business Premises Declaration</option></select>
+          </div>
+          <div class="form-group"><label>Period</label>
+            <select><option>Full Year</option><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
+          </div>
+        </div>
+        <div class="form-group"><label>Total assessable income (₦)</label><input type="number" placeholder="0.00" /></div>
+        <button class="btn btn-primary">Submit return <i class="ti ti-arrow-right"></i></button>
+      </div>
+
+      <div id="et3" class="tab-panel form-card" hidden>
+        <h2 class="form-title"><i class="ti ti-shield-check"></i> Check compliance status</h2>
+        <div class="form-row">
+          <div class="form-group"><label>TIN</label><input type="text" placeholder="12345678-0001" /></div>
+          <div class="form-group"><label>Tax Year</label><select><option>2026</option><option>2025</option><option>2024</option></select></div>
+        </div>
+        <button class="btn btn-primary" onclick="showComplianceResult()">Check status <i class="ti ti-search"></i></button>
+        <div id="compliance-result" class="compliance-table" hidden>
+          <div class="comp-row"><span>Corporate Tax 2025</span><span class="status-pill pill-green"><i class="ti ti-check"></i> Paid</span></div>
+          <div class="comp-row"><span>PAYE Q1 2026</span><span class="status-pill pill-green"><i class="ti ti-check"></i> Paid</span></div>
+          <div class="comp-row"><span>PAYE Q2 2026</span><span class="status-pill pill-red"><i class="ti ti-x"></i> Outstanding — due Jun 30</span></div>
+          <div class="comp-row"><span>Business Premises 2026</span><span class="status-pill pill-amber"><i class="ti ti-clock"></i> Pending review</span></div>
+        </div>
+      </div>
+
+      <div id="et4" class="tab-panel form-card" hidden>
+        <h2 class="form-title"><i class="ti ti-certificate"></i> Apply for Tax Clearance Certificate (TCC)</h2>
+        <p class="form-desc">Required for government contracts, bid submissions, and public-sector engagements. Processing: 5–10 business days.</p>
+        <div class="form-row">
+          <div class="form-group"><label>TIN</label><input type="text" placeholder="12345678-0001" /></div>
+          <div class="form-group"><label>Business Name</label><input type="text" placeholder="Company name" /></div>
+        </div>
+        <div class="form-group"><label>Purpose of TCC</label>
+          <select><option>Government contract bid</option><option>Immigration / expatriate quota</option><option>Bank loan / credit facility</option><option>Other</option></select>
+        </div>
+        <button class="btn btn-primary">Apply for TCC <i class="ti ti-arrow-right"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── LEGAL & OFFICERS ────────────────── -->
+  <section id="section-legal" class="page">
+    <div class="section-block">
+      <div class="page-header">
+        <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <h1>Lawyers &amp; Law Enforcement Portal</h1>
+          <p>Legal practitioners and police / government officers — Umuahia Metropolis</p>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="form-card">
+          <h2 class="form-title"><i class="ti ti-scale"></i> Legal Practitioners</h2>
+          <div class="form-group"><label>Full name (as on bar licence)</label><input type="text" placeholder="Barr. Chukwuemeka Obi" /></div>
+          <div class="form-group"><label>NBA Membership Number</label><input type="text" placeholder="NBA/0000/2025" /></div>
+          <div class="form-group"><label>Law Firm / Chambers</label><input type="text" placeholder="Obi &amp; Associates" /></div>
+          <div class="form-group"><label>TIN</label><input type="text" placeholder="12345678-0001" /></div>
+          <div class="form-row">
+            <div class="form-group"><label>Annual Earnings (₦)</label><input type="number" placeholder="0.00" /></div>
+            <div class="form-group"><label>Filing Year</label><select><option>2026</option><option>2025</option><option>2024</option></select></div>
+          </div>
+          <button class="btn btn-primary btn-full">File return <i class="ti ti-arrow-right"></i></button>
+        </div>
+        <div class="form-card">
+          <h2 class="form-title"><i class="ti ti-shield-check"></i> Police &amp; Government Officers</h2>
+          <p class="form-desc">Officers of the NPF, civil servants, and government agencies with business interests in Umuahia Metropolis must declare and file annually.</p>
+          <div class="form-group"><label>Full Name</label><input type="text" placeholder="Inspector Adaeze Nwosu" /></div>
+          <div class="form-group"><label>Service Number / Staff ID</label><input type="text" placeholder="NPF/0000/2010" /></div>
+          <div class="form-group"><label>Station / Department</label><input type="text" placeholder="Umuahia Central Police Station" /></div>
+          <div class="form-group"><label>TIN (if applicable)</label><input type="text" placeholder="12345678-0001" /></div>
+          <div class="form-group"><label>Declare business interests?</label>
+            <select><option>No external business interests</option><option>Yes — I have business interests to declare</option></select>
+          </div>
+          <button class="btn btn-primary btn-full">Submit declaration <i class="ti ti-arrow-right"></i></button>
+          <div class="alert-panel alert-danger" style="margin-top:14px">
+            <h4><i class="ti ti-alert-octagon"></i> Mandatory declaration</h4>
+            <div class="al-item"><i class="ti ti-x"></i> Non-declaration: ₦500,000 fine</div>
+            <div class="al-item"><i class="ti ti-x"></i> ICPC referral for repeat violations</div>
+            <div class="al-item"><i class="ti ti-x"></i> Criminal prosecution under EFCC Act</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── PAY ────────────────── -->
+  <section id="section-pay" class="page">
+    <div class="section-block">
+      <div class="page-header">
+        <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <h1>Tax Payment Portal</h1>
+          <p>Pay all Umuahia Metropolis taxes and levies securely</p>
+        </div>
+      </div>
+      <div class="pay-layout">
+        <div class="form-card">
+          <h2 class="form-title"><i class="ti ti-credit-card"></i> Make a payment</h2>
+          <div class="form-row">
+            <div class="form-group"><label>TIN / Payer ID</label><input id="pay-tin" type="text" placeholder="12345678-0001" /></div>
+            <div class="form-group"><label>Tax type</label>
+              <select id="pay-type" onchange="updatePayTotal()">
+                <option value="">Select tax type…</option>
+                <option value="50000">Corporate Income Tax</option>
+                <option value="25000">Business Premises Levy</option>
+                <option value="15000">Hotel Consumption Levy</option>
+                <option value="30000">PAYE (Staff salaries)</option>
+                <option value="10000">Education Levy</option>
+                <option value="20000">Withholding Tax</option>
+                <option value="8000">Legal Practitioners Levy</option>
+                <option value="5000">Sign / Signboard Fee</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Assessment Year</label>
+              <select id="pay-year"><option>2026</option><option>2025</option><option>2024</option></select>
+            </div>
+            <div class="form-group"><label>Assessment Reference</label><input id="pay-ref" type="text" placeholder="ASS/2026/XXXX" /></div>
+          </div>
+          <div class="form-group"><label>Amount (₦)</label><input id="pay-amount" type="number" placeholder="0.00" oninput="updatePayTotal()" /></div>
+          <div class="pay-total-box">
+            <span>Total payable</span>
+            <span id="pay-total-display">₦0.00</span>
+          </div>
+          <p class="field-label">Choose payment method</p>
+          <div class="pay-methods">
+            <div class="pay-method" tabindex="0" onclick="selectPayMethod(this)" role="button" aria-pressed="false"><i class="ti ti-building-bank"></i><span>Bank transfer</span></div>
+            <div class="pay-method active" tabindex="0" onclick="selectPayMethod(this)" role="button" aria-pressed="true"><i class="ti ti-device-mobile"></i><span>USSD / mobile</span></div>
+            <div class="pay-method" tabindex="0" onclick="selectPayMethod(this)" role="button" aria-pressed="false"><i class="ti ti-credit-card"></i><span>Debit card</span></div>
+            <div class="pay-method" tabindex="0" onclick="selectPayMethod(this)" role="button" aria-pressed="false"><i class="ti ti-brand-stripe"></i><span>Remita</span></div>
+          </div>
+          <button class="btn btn-primary btn-full" id="pay-submit-btn" style="margin-top:16px" onclick="submitPayment()"><i class="ti ti-lock"></i> Proceed to payment</button>
+        </div>
+        <aside class="pay-sidebar">
+          <div class="alert-panel alert-danger">
+            <h4><i class="ti ti-alert-octagon"></i> Penalty warnings</h4>
+            <div class="al-item"><i class="ti ti-x"></i> Late filing: 10% p.a. interest</div>
+            <div class="al-item"><i class="ti ti-x"></i> Non-payment: business seal / closure</div>
+            <div class="al-item"><i class="ti ti-x"></i> False declaration: criminal prosecution</div>
+            <div class="al-item"><i class="ti ti-x"></i> Non-registration: ₦250,000 fine</div>
+          </div>
+          <div class="info-panel">
+            <h4><i class="ti ti-info-circle"></i> After payment</h4>
+            <p>Remita receipt + UTAPS acknowledgement within 24 hours.</p>
+            <p>Help: <strong>08100-UTAPS</strong> or <strong>help@utaps.gov.ng</strong></p>
+          </div>
+          <div class="info-panel">
+            <h4><i class="ti ti-receipt"></i> Recent payments</h4>
+            <div class="recent-pay"><span>Corporate Tax — Jun 2025</span><span class="pill-green-sm">₦50,000</span></div>
+            <div class="recent-pay"><span>PAYE Q1 2026</span><span class="pill-green-sm">₦30,000</span></div>
+            <div class="recent-pay"><span>Business Premises 2026</span><span class="pill-amber-sm">Pending</span></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── STATUS REPORT ────────────────── -->
+  <section id="section-status" class="page">
+    <div class="section-block">
+      <div class="page-header">
+        <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <h1>Payment Status Reports</h1>
+          <p>Compliance status and deadline notices for all Umuahia Metropolis entities</p>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="form-card" style="margin-bottom:1.5rem">
+        <h2 class="form-title"><i class="ti ti-search"></i> Look up entity status</h2>
+        <div class="form-row">
+          <div class="form-group"><label>TIN or Business Name</label><input id="status-search" type="text" placeholder="12345678-0001 or company name" /></div>
+          <div class="form-group"><label>Entity Type</label>
+            <select id="status-type">
+              <option value="">All entity types</option>
+              <option>Company / Corporation</option>
+              <option>Bank / Financial Institution</option>
+              <option>Shopping Plaza</option>
+              <option>Hospital / Clinic</option>
+              <option>School / Educational Institution</option>
+              <option>Law Firm</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="loadStatusReport()"><i class="ti ti-report-analytics"></i> Generate status report</button>
+      </div>
+
+      <!-- Status report output -->
+      <div id="status-loading" hidden style="padding:2rem;text-align:center;color:var(--text-muted)"><i class="ti ti-loader-2" style="font-size:24px"></i> Loading status report…</div>
+      <div id="status-report" hidden>
+        <!-- Entity header -->
+        <div class="status-entity-card">
+          <div class="sec-icon coral"><i class="ti ti-building-hospital"></i></div>
+          <div class="sec-info">
+            <h3 id="sec-entity-name">—</h3>
+            <p id="sec-entity-info">Enter a TIN above and click Generate status report</p>
+          </div>
+          <div class="sec-badge" id="sec-overall-badge">
+            <span class="status-pill pill-red">Non-Compliant</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap">
+          <div class="info-panel" style="flex:1;min-width:160px"><h4>Total paid</h4><p id="sec-total-paid" style="font-size:18px;font-weight:600;color:var(--text)">—</p></div>
+          <div class="info-panel" style="flex:1;min-width:160px"><h4>Outstanding</h4><p id="sec-outstanding" style="font-size:18px;font-weight:600;color:#dc2626">—</p></div>
+        </div>
+        <!-- Status table -->
+        <div class="status-table-wrap">
+          <div class="status-table-head">
+            <span>Tax Obligation</span><span>Period</span><span>Amount (₦)</span><span>Due Date</span><span>Status</span><span>Action</span>
+          </div>
+          <div id="status-table-body">
+            <div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:13.5px">Enter a TIN and generate a report to see payment obligations.</div>
+          </div>
+        </div>
+
+        <!-- Penalty notice -->
+        <div class="penalty-notice" id="penalty-notice-block" hidden>
+          <div class="penalty-header">
+            <i class="ti ti-alert-triangle"></i>
+            <h3>Official Compliance Notice — UTAPS/2026/PEN/00412</h3>
+          </div>
+          <p>This notice is issued to <strong>Sunshine Medical Centre Ltd (TIN: 12345678-0001)</strong> in accordance with the Abia State Revenue Law, 2021. The following outstanding obligations have been identified:</p>
+          <ul class="penalty-list">
+            <li><strong>PAYE Q1 2026:</strong> ₦45,000 principal + ₦4,500 penalty (10%) = <strong>₦49,500 total due immediately</strong></li>
+            <li><strong>PAYE Q2 2026:</strong> ₦45,000 due by 30 June 2026 — failure to pay will attract additional 10% monthly penalty</li>
+          </ul>
+          <p class="penalty-warning">Failure to comply within <strong>14 days</strong> of this notice may result in: business premises seal, publication of defaulter's list, and referral to the State Attorney General for prosecution.</p>
+          <div class="penalty-actions">
+            <button class="btn btn-primary" onclick="showSection('pay')"><i class="ti ti-credit-card"></i> Pay outstanding now</button>
+            <button class="btn btn-outline"><i class="ti ti-download"></i> Download notice (PDF)</button>
+            <button class="btn btn-ghost"><i class="ti ti-mail"></i> Send notice to entity email</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── ANALYTICS ────────────────── -->
+  <section id="section-analytics" class="page">
+    <div class="section-block">
+      <div class="page-header">
+        <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <h1>Revenue Analytics Dashboard</h1>
+          <p>Monthly collections — Umuahia Metropolis, Fiscal Year 2026</p>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><span class="stat-lbl">Total collected YTD</span><span class="stat-val" id="stat-ytd">₦847M</span><span class="stat-chg positive"><i class="ti ti-trending-up"></i> 18.3% vs 2025</span></div>
+        <div class="stat-card"><span class="stat-lbl">June collection (est.)</span><span class="stat-val" id="stat-june">₦163M</span><span class="stat-chg positive"><i class="ti ti-trending-up"></i> 7.1% vs May</span></div>
+        <div class="stat-card"><span class="stat-lbl">Registered taxpayers</span><span class="stat-val" id="stat-reg">4,812</span><span class="stat-chg positive"><i class="ti ti-trending-up"></i> 312 new this year</span></div>
+        <div class="stat-card"><span class="stat-lbl">Outstanding liabilities</span><span class="stat-val" id="stat-out">₦94M</span><span class="stat-chg negative"><i class="ti ti-alert-circle"></i> 12 new debtors</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div><h3>Monthly revenue collected (₦ millions)</h3><p>Jan–Jun 2026 · All tax heads combined</p></div>
+          <div class="chart-filters" role="group">
+            <button class="filter-btn active" onclick="setChartFilter(this,'all')">All</button>
+            <button class="filter-btn" onclick="setChartFilter(this,'corporate')">Corporate</button>
+            <button class="filter-btn" onclick="setChartFilter(this,'paye')">PAYE</button>
+            <button class="filter-btn" onclick="setChartFilter(this,'levies')">Levies</button>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <span class="leg-item"><span class="leg-sw" style="background:#0a2d5e"></span>Corporate tax</span>
+          <span class="leg-item"><span class="leg-sw" style="background:#3266ad"></span>PAYE</span>
+          <span class="leg-item"><span class="leg-sw" style="background:#85b7eb"></span>Levies &amp; others</span>
+        </div>
+        <div class="chart-wrap" style="height:300px"><canvas id="revenueChart"></canvas></div>
+      </div>
+      <div class="two-col">
+        <div class="chart-card">
+          <div class="chart-hdr"><div><h3>Revenue by entity type</h3><p>Share of total 2026 YTD — Umuahia Metropolis</p></div></div>
+          <div class="chart-legend">
+            <span class="leg-item"><span class="leg-sw" style="background:#0a2d5e"></span>Companies 42%</span>
+            <span class="leg-item"><span class="leg-sw" style="background:#3266ad"></span>Banks 28%</span>
+            <span class="leg-item"><span class="leg-sw" style="background:#85b7eb"></span>Hospitals 14%</span>
+            <span class="leg-item"><span class="leg-sw" style="background:#b5d4f4"></span>Schools 10%</span>
+            <span class="leg-item"><span class="leg-sw" style="background:#d8e9f8"></span>Plazas 6%</span>
+          </div>
+          <div class="chart-wrap" style="height:220px"><canvas id="pieChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div><h3>12-month collection trend</h3><p>Jul 2025 – Jun 2026 · Umuahia Metropolis</p></div></div>
+          <div class="chart-wrap" style="height:250px"><canvas id="trendChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── FEEDBACK ────────────────── -->
+  <section id="section-feedback" class="page">
+    <div class="section-block">
+      <div class="page-header">
+        <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <h1>Stakeholder Feedback &amp; Ratings</h1>
+          <p>Help us improve UTAPS — your feedback shapes tax administration in Umuahia Metropolis</p>
+        </div>
+      </div>
+
+      <div class="feedback-layout">
+        <!-- Feedback form -->
+        <div class="form-card feedback-form-card">
+          <h2 class="form-title"><i class="ti ti-message-star"></i> Submit your feedback</h2>
+
+          <div class="form-group">
+            <label>Entity / Your name</label>
+            <input type="text" placeholder="Company name or your full name" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Entity Type</label>
+              <select>
+                <option value="">Select…</option>
+                <option>Company / Corporation</option>
+                <option>Bank / Financial Institution</option>
+                <option>Shopping Plaza</option>
+                <option>Hospital / Clinic</option>
+                <option>School / Institution</option>
+                <option>Lawyer / Law Firm</option>
+                <option>Individual taxpayer</option>
+                <option>Government officer</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Feedback category</label>
+              <select>
+                <option>Portal usability</option>
+                <option>Payment process</option>
+                <option>Tax filing experience</option>
+                <option>Customer support</option>
+                <option>Deadline notifications</option>
+                <option>General suggestion</option>
+                <option>Complaint / Issue</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Star rating -->
+          <div class="form-group">
+            <label>Overall rating</label>
+            <div class="star-rating" id="star-rating" role="radiogroup" aria-label="Rate UTAPS from 1 to 5 stars">
+              <button class="star" data-val="1" onclick="setRating(1)" aria-label="1 star"><i class="ti ti-star"></i></button>
+              <button class="star" data-val="2" onclick="setRating(2)" aria-label="2 stars"><i class="ti ti-star"></i></button>
+              <button class="star" data-val="3" onclick="setRating(3)" aria-label="3 stars"><i class="ti ti-star"></i></button>
+              <button class="star" data-val="4" onclick="setRating(4)" aria-label="4 stars"><i class="ti ti-star"></i></button>
+              <button class="star" data-val="5" onclick="setRating(5)" aria-label="5 stars"><i class="ti ti-star"></i></button>
+            </div>
+            <span id="rating-label" class="rating-label">Select a rating</span>
+          </div>
+
+          <!-- Sub-ratings -->
+          <div class="sub-ratings">
+            <div class="sub-rating-row">
+              <span>Ease of use</span>
+              <div class="mini-stars" data-group="ease">
+                <button onclick="setMiniRating('ease',1)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('ease',2)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('ease',3)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('ease',4)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('ease',5)"><i class="ti ti-star"></i></button>
+              </div>
+            </div>
+            <div class="sub-rating-row">
+              <span>Payment speed</span>
+              <div class="mini-stars" data-group="speed">
+                <button onclick="setMiniRating('speed',1)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('speed',2)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('speed',3)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('speed',4)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('speed',5)"><i class="ti ti-star"></i></button>
+              </div>
+            </div>
+            <div class="sub-rating-row">
+              <span>Support quality</span>
+              <div class="mini-stars" data-group="support">
+                <button onclick="setMiniRating('support',1)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('support',2)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('support',3)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('support',4)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('support',5)"><i class="ti ti-star"></i></button>
+              </div>
+            </div>
+            <div class="sub-rating-row">
+              <span>Deadline clarity</span>
+              <div class="mini-stars" data-group="deadline">
+                <button onclick="setMiniRating('deadline',1)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('deadline',2)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('deadline',3)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('deadline',4)"><i class="ti ti-star"></i></button>
+                <button onclick="setMiniRating('deadline',5)"><i class="ti ti-star"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:16px">
+            <label>Your feedback / suggestion</label>
+            <textarea rows="5" placeholder="Describe your experience, suggest improvements, or report an issue…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;resize:vertical;background:var(--bg);color:var(--text)"></textarea>
+          </div>
+          <label class="checkbox-label" style="margin-bottom:16px"><input type="checkbox" /> I consent to UTAPS using my feedback to improve the portal</label>
+          <button class="btn btn-primary" id="feedback-submit-btn" onclick="submitFeedback()"><i class="ti ti-send"></i> Submit feedback</button>
+          <div id="feedback-success" class="auth-success" hidden><i class="ti ti-circle-check"></i> Thank you! Your feedback has been received and will be reviewed by the UTAPS team.</div>
+        </div>
+
+        <!-- Feedback summary panel -->
+        <aside class="feedback-summary">
+          <div class="chart-card">
+            <h3 style="font-size:15px;font-weight:500;margin-bottom:12px"><i class="ti ti-star-filled" style="color:#f59e0b"></i> Overall portal rating</h3>
+            <div class="overall-score">
+              <span class="score-num" id="fb-avg-score">4.1</span>
+              <div>
+                <div class="score-stars">
+                  <i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-half-filled"></i>
+                </div>
+                <span class="score-total" id="fb-count">Based on 312 reviews</span>
+              </div>
+            </div>
+            <div class="rating-bars">
+              <div class="rb-row"><span>5 ★</span><div class="rb-bar"><div class="rb-fill" id="rb-fill-5" style="width:52%"></div></div><span id="rb-pct-5">52%</span></div>
+              <div class="rb-row"><span>4 ★</span><div class="rb-bar"><div class="rb-fill" id="rb-fill-4" style="width:28%"></div></div><span id="rb-pct-4">28%</span></div>
+              <div class="rb-row"><span>3 ★</span><div class="rb-bar"><div class="rb-fill" id="rb-fill-3" style="width:11%"></div></div><span id="rb-pct-3">11%</span></div>
+              <div class="rb-row"><span>2 ★</span><div class="rb-bar"><div class="rb-fill" id="rb-fill-2" style="width:6%"></div></div><span id="rb-pct-2">6%</span></div>
+              <div class="rb-row"><span>1 ★</span><div class="rb-bar"><div class="rb-fill" id="rb-fill-1" style="width:3%"></div></div><span id="rb-pct-1">3%</span></div>
+            </div>
+          </div>
+          <div class="chart-card" style="margin-top:1rem">
+            <h3 style="font-size:14px;font-weight:500;margin-bottom:12px">Recent reviews</h3>
+            <div id="recent-reviews">
+            <div class="review-item">
+              <div class="review-header">
+                <span class="review-name">Aba Hospital Ltd</span>
+                <span class="mini-score">★★★★★</span>
+              </div>
+              <p class="review-body">"The payment portal is much easier than the old process. Quick receipt issuance."</p>
+              <span class="review-date">15 Jun 2026</span>
+            </div>
+            <div class="review-item">
+              <div class="review-header">
+                <span class="review-name">First Trust Bank</span>
+                <span class="mini-score">★★★★☆</span>
+              </div>
+              <p class="review-body">"Deadline notifications need to come earlier — 8 days is short for corporates."</p>
+              <span class="review-date">10 Jun 2026</span>
+            </div>
+            <div class="review-item">
+              <div class="review-header">
+                <span class="review-name">Sunrise Academy</span>
+                <span class="mini-score">★★★☆☆</span>
+              </div>
+              <p class="review-body">"Wish the education levy section was more clearly labelled. Otherwise smooth."</p>
+              <span class="review-date">2 Jun 2026</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── FORMS ────────────────── -->
+  <section id="section-forms" class="page">
+    <div class="section-block">
+      <div class="page-header">
+        <button class="btn btn-back" onclick="showSection('home')"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <h1>Forms &amp; Documents</h1>
+          <p>Official UTAPS forms for tax filing and compliance in Umuahia Metropolis</p>
+        </div>
+      </div>
+      <div class="entity-grid">
+        <div class="entity-card"><div class="ec-icon blue"><i class="ti ti-file-download"></i></div><h3>Form UTAPS-01</h3><p>Corporate Income Tax Return — all registered companies in Umuahia Metropolis.</p><span class="tag tag-red">Mandatory · Annual</span></div>
+        <div class="entity-card"><div class="ec-icon green"><i class="ti ti-file-download"></i></div><h3>Form UTAPS-02</h3><p>PAYE Remittance Schedule — employers with monthly staff payroll obligations.</p><span class="tag tag-red">Monthly</span></div>
+        <div class="entity-card"><div class="ec-icon amber"><i class="ti ti-file-download"></i></div><h3>Form UTAPS-03</h3><p>Business Premises Levy Declaration — all entities with physical premises.</p><span class="tag tag-green">Updated 2026</span></div>
+        <div class="entity-card"><div class="ec-icon coral"><i class="ti ti-file-download"></i></div><h3>Form UTAPS-04</h3><p>Hotel &amp; Consumption Tax Quarterly Return — hotels, restaurants, hospitality.</p><span class="tag tag-red">Quarterly</span></div>
+        <div class="entity-card"><div class="ec-icon purple"><i class="ti ti-file-download"></i></div><h3>Form UTAPS-05</h3><p>Education Levy Return — private schools, universities, and institutions.</p><span class="tag tag-red">Annual</span></div>
+        <div class="entity-card"><div class="ec-icon teal"><i class="ti ti-certificate"></i></div><h3>TCC Application</h3><p>Official Tax Clearance Certificate for contracts, bids, and expatriate quota.</p><span class="tag tag-green">Online 2026</span></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════ FOOTER ══════════════════════ -->
+<footer class="site-footer" role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <strong>TaxUmuahia — UTAPS</strong>
+      <span>Umuahia Tax Automation &amp; Payment System</span>
+      <span>Powered by the Abia State Internal Revenue Service (ABSIRS) &bull; Serving Umuahia Metropolis only</span>
+    </div>
+    <div class="footer-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Accessibility</a>
+      <a href="#">Contact UTAPS</a>
+      <a href="#">FIRS Integration</a>
+      <a href="#">Sitemap</a>
+    </div>
+    <div class="footer-copy">© 2026 Government of Abia State, Nigeria. All rights reserved.</div>
+  </div>
+</footer>
+
+</body>
+</html>
