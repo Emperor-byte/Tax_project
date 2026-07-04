@@ -1,36 +1,54 @@
 'use strict';
 
-const API = '/api';
-
-async function apiRequest(method, endpoint, body = null, requiresAuth = false) {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('utaps_token');
-  if (requiresAuth && token) headers['Authorization'] = 'Bearer ' + token;
-
-  const opts = { method, headers };
-  if (body) opts.body = JSON.stringify(body);
-
-  const res = await fetch(API + endpoint, opts);
-  const contentType = res.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await res.text();
-    throw new Error(text || `Server error: ${res.status}`);
+// ==========================================
+// LOCAL STORAGE DATABASE SIMULATION
+// ==========================================
+function initLocalDB() {
+  if (!localStorage.getItem('utaps_users')) {
+    const adminUser = {
+      _id: 'admin_123',
+      tin: 'ADMIN-001',
+      bizName: 'System Administrator',
+      entityType: 'Government',
+      address: 'Secretariat, Umuahia',
+      location: 'Umuahia North',
+      email: 'admin@gmail.com',
+      phone: '08000000000',
+      role: 'admin',
+      password: 'admin1234',
+      utapsId: 'UTAPS-ADMIN',
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem('utaps_users', JSON.stringify([adminUser]));
+    localStorage.setItem('utaps_payments', JSON.stringify([]));
+    localStorage.setItem('utaps_feedbacks', JSON.stringify([]));
+    localStorage.setItem('utaps_notices', JSON.stringify([]));
   }
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
 }
 
-const get  = (ep, auth = false) => apiRequest('GET', ep, null, auth);
-const post = (ep, body, auth = false) => apiRequest('POST', ep, body, auth);
+function getTable(name) {
+  return JSON.parse(localStorage.getItem(name) || '[]');
+}
 
+function saveTable(name, data) {
+  localStorage.setItem(name, JSON.stringify(data));
+}
+
+function generateId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+// ==========================================
+// SESSION MANAGEMENT
+// ==========================================
 let currentUser = null;
 function isLoggedIn() { return !!localStorage.getItem('utaps_token'); }
-function saveSession(data) {
-  localStorage.setItem('utaps_token', data.token);
-  localStorage.setItem('utaps_user', JSON.stringify(data.user));
-  currentUser = data.user;
+function saveSession(user) {
+  // We use a fake token since this is pure client-side
+  localStorage.setItem('utaps_token', 'fake-jwt-token-' + user._id);
+  localStorage.setItem('utaps_user', JSON.stringify(user));
+  currentUser = user;
 }
 function clearSession() {
   localStorage.removeItem('utaps_token');
@@ -136,8 +154,11 @@ function handleCard(event, section) {
   if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSection(section); }
 }
 
+// ==========================================
+// AUTH LOGIC
+// ==========================================
 async function handleLogin() {
-  const tin    = document.getElementById('login-tin')?.value?.trim();
+  const tin    = document.getElementById('login-tin')?.value?.trim().toLowerCase();
   const pass   = document.getElementById('login-pass')?.value;
   const errEl  = document.getElementById('login-error');
   if (errEl) errEl.hidden = true;
@@ -146,17 +167,20 @@ async function handleLogin() {
   const btn = document.querySelector('.auth-submit');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Signing in…'; }
 
-  try {
-    const data = await post('/auth/login', { tin, password: pass });
-    saveSession(data);
-    updateNavForAuth();
-    showToast(data.message, 'success');
-    showSection(currentUser.role === 'admin' ? 'analytics' : 'home');
-  } catch (err) {
-    showError(errEl, err.message);
-  } finally {
+  setTimeout(() => {
+    const users = getTable('utaps_users');
+    const user = users.find(u => (u.tin.toLowerCase() === tin || u.email.toLowerCase() === tin) && u.password === pass);
+
+    if (user) {
+      saveSession(user);
+      updateNavForAuth();
+      showToast(`Welcome back, ${user.contactPerson || user.bizName}!`, 'success');
+      showSection(currentUser.role === 'admin' ? 'analytics' : 'home');
+    } else {
+      showError(errEl, 'Invalid credentials.');
+    }
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-login"></i> Sign in'; }
-  }
+  }, 500); // Simulate network delay
 }
 
 function togglePassword(inputId, btn) {
@@ -226,39 +250,53 @@ async function handleRegister() {
   const successEl = document.getElementById('reg-success');
   const btn = document.getElementById('reg-submit-btn');
 
-  const body = {
-    bizName:       document.getElementById('reg-bizname')?.value?.trim(),
-    tin:           document.getElementById('reg-tin')?.value?.trim(),
-    entityType:    document.getElementById('reg-entity')?.value,
-    location:      document.getElementById('reg-location')?.value,
-    rcNumber:      document.getElementById('reg-rc')?.value?.trim(),
-    address:       document.getElementById('reg-address')?.value?.trim(),
-    annualTurnover:document.getElementById('reg-turnover')?.value,
-    employees:     document.getElementById('reg-employees')?.value,
-    contactPerson: document.getElementById('reg-contact')?.value?.trim(),
-    role:          document.getElementById('reg-role')?.value?.trim(),
-    email:         document.getElementById('reg-email')?.value?.trim(),
-    phone:         document.getElementById('reg-phone')?.value?.trim(),
-    password:      document.getElementById('reg-pass')?.value
-  };
+  const tin = document.getElementById('reg-tin')?.value?.trim();
+  const email = document.getElementById('reg-email')?.value?.trim().toLowerCase();
 
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Submitting…'; }
 
-  try {
-    const data = await post('/auth/register', body);
-    saveSession(data);
+  setTimeout(() => {
+    const users = getTable('utaps_users');
+    if (users.some(u => u.tin === tin || u.email.toLowerCase() === email)) {
+      showToast('An account with this TIN or email already exists.', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Submit registration'; }
+      return;
+    }
+
+    const newUser = {
+      _id: generateId(),
+      bizName:       document.getElementById('reg-bizname')?.value?.trim(),
+      tin:           tin,
+      entityType:    document.getElementById('reg-entity')?.value,
+      location:      document.getElementById('reg-location')?.value,
+      rcNumber:      document.getElementById('reg-rc')?.value?.trim(),
+      address:       document.getElementById('reg-address')?.value?.trim(),
+      annualTurnover: parseFloat(document.getElementById('reg-turnover')?.value) || 0,
+      employees:     parseInt(document.getElementById('reg-employees')?.value) || 0,
+      contactPerson: document.getElementById('reg-contact')?.value?.trim(),
+      role:          'user',
+      email:         email,
+      phone:         document.getElementById('reg-phone')?.value?.trim(),
+      password:      document.getElementById('reg-pass')?.value,
+      utapsId:       `UTAPS-2026-${String(users.length + 1).padStart(4,'0')}`,
+      status:        'active',
+      createdAt:     new Date().toISOString()
+    };
+
+    users.push(newUser);
+    saveTable('utaps_users', users);
+
+    saveSession(newUser);
     updateNavForAuth();
     if (successEl) {
       successEl.hidden = false;
-      successEl.innerHTML = `<i class="ti ti-circle-check"></i> ${data.message}`;
+      successEl.innerHTML = `<i class="ti ti-circle-check"></i> Registration successful! Your UTAPS ID is ${newUser.utapsId}.`;
       successEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
     }
     setTimeout(() => { showSection('home'); showToast('Welcome to UTAPS!', 'success'); }, 2000);
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
+    
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Submit registration'; }
-  }
+  }, 500);
 }
 
 function showComplianceResult() {
@@ -283,6 +321,9 @@ function selectPayMethod(el) {
   el.classList.add('active'); el.setAttribute('aria-pressed','true');
 }
 
+// ==========================================
+// PAYMENTS & STATUS
+// ==========================================
 async function submitPayment() {
   if (!isLoggedIn()) { showToast('Please sign in to make a payment.', 'error'); showSection('login'); return; }
   const taxType = document.getElementById('pay-type')?.value;
@@ -296,36 +337,34 @@ async function submitPayment() {
   const btn = document.getElementById('pay-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Processing…'; }
 
-  try {
-    const data = await post('/payments', { taxType, period: year, amount, assessmentRef: ref, method }, true);
-    showToast(`✅ ${data.message} Receipt: ${data.receiptNo}`, 'success');
+  setTimeout(() => {
+    const payments = getTable('utaps_payments');
+    const receiptNo = `UTAPS-REC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(payments.length+1).padStart(4,'0')}`;
+    
+    const newPayment = {
+      _id: generateId(),
+      userId: currentUser._id,
+      taxType, period: year, amount: parseFloat(amount), assessmentRef: ref,
+      method, status: 'paid', paidAt: new Date().toISOString(), receiptNo
+    };
+
+    payments.push(newPayment);
+    saveTable('utaps_payments', payments);
+
+    showToast(`✅ Payment recorded successfully. Receipt: ${receiptNo}`, 'success');
     if (isLoggedIn()) loadMyStatus();
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
+    
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-lock"></i> Proceed to payment'; }
-  }
+  }, 800);
 }
 
 async function loadStatusReport() {
   const input   = document.getElementById('status-search');
-  const report  = document.getElementById('status-report');
   const loading = document.getElementById('status-loading');
   const tin = input?.value?.trim();
   if (!tin) { showToast('Please enter a TIN or business name.', 'error'); return; }
-
-  if (loading) loading.hidden = false;
-  if (report)  report.hidden  = true;
-
-  try {
-    const data = await get('/status/' + encodeURIComponent(tin));
-    renderStatusReport(data);
-    if (report)  report.hidden  = false;
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    if (loading) loading.hidden = true;
-  }
+  // Not fully implemented for non-logged-in in demo, default to loadMyStatus for simplicity
+  loadMyStatus();
 }
 
 async function loadMyStatus() {
@@ -333,15 +372,30 @@ async function loadMyStatus() {
   const report  = document.getElementById('status-report');
   const loading = document.getElementById('status-loading');
   if (loading) loading.hidden = false;
-  try {
-    const data = await get('/status/me/report', true);
+
+  setTimeout(() => {
+    const payments = getTable('utaps_payments').filter(p => p.userId === currentUser._id);
+    const notices = getTable('utaps_notices').filter(n => n.userId === currentUser._id);
+    
+    const overdue = payments.filter(p => p.status === 'overdue');
+    const due = payments.filter(p => p.status === 'due');
+
+    const summary = {
+      totalPaid: payments.filter(p => p.status === 'paid').reduce((s,p) => s + p.amount, 0),
+      totalOutstanding: [...overdue, ...due].reduce((s,p) => s + p.amount, 0),
+      overdueCount: overdue.length, dueCount: due.length
+    };
+
+    const data = {
+      entity: currentUser,
+      overallStatus: overdue.length === 0 ? 'Compliant' : 'Non-Compliant',
+      payments, notices, summary
+    };
+
     renderStatusReport(data);
     if (report) report.hidden = false;
-  } catch (err) {
-    console.warn('Status load failed:', err.message);
-  } finally {
     if (loading) loading.hidden = true;
-  }
+  }, 400);
 }
 
 function renderStatusReport(data) {
@@ -398,15 +452,15 @@ function renderStatusReport(data) {
 
 async function viewReceipt(paymentId) {
   if (!isLoggedIn()) { showToast('Please sign in to view receipts.', 'error'); return; }
-  try {
-    const data = await get('/payments/' + paymentId + '/receipt', true);
-    const r = data.receipt;
-    alert(`UTAPS OFFICIAL RECEIPT\n${'─'.repeat(36)}\nReceipt No: ${r.receiptNo}\nUTAPS ID:   ${r.utapsId}\nEntity:     ${r.bizName}\nTIN:        ${r.tin}\nTax type:   ${r.taxType}\nPeriod:     ${r.period}\nAmount:     ₦${r.amount?.toLocaleString('en-NG')}\nMethod:     ${r.method}\nPaid on:    ${r.paidAt?.slice(0,10)}\n${'─'.repeat(36)}\n${r.issuedBy}`);
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
+  const payments = getTable('utaps_payments');
+  const r = payments.find(p => p._id === paymentId);
+  if (!r) { showToast('Payment not found.', 'error'); return; }
+  alert(`UTAPS OFFICIAL RECEIPT\n${'─'.repeat(36)}\nReceipt No: ${r.receiptNo}\nUTAPS ID:   ${currentUser.utapsId}\nEntity:     ${currentUser.bizName}\nTIN:        ${currentUser.tin}\nTax type:   ${r.taxType}\nPeriod:     ${r.period}\nAmount:     ₦${r.amount?.toLocaleString('en-NG')}\nMethod:     ${r.method}\nPaid on:    ${r.paidAt?.slice(0,10)}\n${'─'.repeat(36)}\nIssued By: UTAPS | Powered By: ABSIRS`);
 }
 
+// ==========================================
+// FEEDBACK
+// ==========================================
 let currentRating = 0;
 const miniRatings = {};
 const RATING_LABELS = { 1:'Poor', 2:'Below average', 3:'Average', 4:'Good', 5:'Excellent!' };
@@ -437,56 +491,90 @@ async function submitFeedback() {
   const successEl = document.getElementById('feedback-success');
   if (currentRating === 0) { showToast('Please select an overall rating.', 'error'); return; }
 
-  const body = {
-    entityName:     document.querySelector('[placeholder="Company name or your full name"]')?.value,
-    entityType:     document.querySelector('.feedback-form-card select:nth-of-type(1)')?.value,
-    category:       document.querySelector('.feedback-form-card select:nth-of-type(2)')?.value,
-    rating:         currentRating,
-    easeRating:     miniRatings['ease'] || 0,
-    speedRating:    miniRatings['speed'] || 0,
-    supportRating:  miniRatings['support'] || 0,
-    deadlineRating: miniRatings['deadline'] || 0,
-    comment:        document.querySelector('.feedback-form-card textarea')?.value
-  };
-
   const btn = document.getElementById('feedback-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Submitting…'; }
 
-  try {
-    const data = await post('/feedback', body, true);
-    if (successEl) { successEl.hidden = false; successEl.innerHTML = `<i class="ti ti-circle-check"></i> ${data.message}`; }
+  setTimeout(() => {
+    const feedbacks = getTable('utaps_feedbacks');
+    feedbacks.push({
+      _id: generateId(),
+      userId: currentUser?._id,
+      userName: currentUser?.bizName || document.querySelector('[placeholder="Company name or your full name"]')?.value,
+      entityType: document.querySelector('.feedback-form-card select:nth-of-type(1)')?.value,
+      category: document.querySelector('.feedback-form-card select:nth-of-type(2)')?.value,
+      rating: currentRating,
+      easeRating: miniRatings['ease'] || 0,
+      speedRating: miniRatings['speed'] || 0,
+      supportRating: miniRatings['support'] || 0,
+      deadlineRating: miniRatings['deadline'] || 0,
+      comment: document.querySelector('.feedback-form-card textarea')?.value,
+      createdAt: new Date().toISOString()
+    });
+    saveTable('utaps_feedbacks', feedbacks);
+    
+    if (successEl) { successEl.hidden = false; successEl.innerHTML = `<i class="ti ti-circle-check"></i> Feedback submitted!`; }
     showToast('Feedback submitted!', 'success');
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Submit feedback'; }
-  }
+  }, 600);
 }
 
 async function loadFeedbackSummary() {
-  // Existing feedback logic if needed or clear
+  // Can be implemented if a public feedback summary page exists
 }
 
-/* ════════════════════════════════════════
-   ADMIN DASHBOARD LOGIC
-   ════════════════════════════════════════ */
+// ==========================================
+// ADMIN DASHBOARD LOGIC
+// ==========================================
 async function loadAdminDashboard() {
   if (!isLoggedIn() || currentUser.role !== 'admin') return;
 
-  try {
-    const data = await get('/admin/dashboard', true);
+  setTimeout(() => {
+    const users = getTable('utaps_users');
+    const payments = getTable('utaps_payments');
+    const feedbacks = getTable('utaps_feedbacks');
+    const notices = getTable('utaps_notices');
+
+    const nonAdminUsers = users.filter(u => u.role !== 'admin');
+    const registeredCount = nonAdminUsers.length;
     
+    let totalPaid = 0;
+    let outstandingLiabilities = 0;
+    const overduePayments = [];
+    const entityBreakdown = {};
+    const monthlyData = { Jan:0, Feb:0, Mar:0, Apr:0, May:0, Jun:0, Jul:0, Aug:0, Sep:0, Oct:0, Nov:0, Dec:0 };
+
+    payments.forEach(p => {
+      if (p.status === 'paid') {
+        totalPaid += p.amount;
+        if (p.paidAt) {
+          const month = new Date(p.paidAt).toLocaleString('en-us', { month: 'short' });
+          if (monthlyData[month] !== undefined) monthlyData[month] += p.amount;
+        }
+      } else if (p.status === 'overdue' || p.status === 'due') {
+        outstandingLiabilities += p.amount;
+      }
+
+      if (p.status === 'overdue') {
+        const u = users.find(user => user._id === p.userId);
+        overduePayments.push({ payment: p, user: u, deadline: p.dueDate });
+      }
+    });
+
+    nonAdminUsers.forEach(u => {
+      entityBreakdown[u.entityType] = (entityBreakdown[u.entityType] || 0) + 1;
+    });
+
     // Summary Cards
-    document.getElementById('admin-stat-reg').textContent = data.registeredCount;
-    document.getElementById('admin-stat-paid').textContent = '₦' + (data.totalPaid / 1e6 || 0).toFixed(1) + 'M';
-    document.getElementById('admin-stat-out').textContent = '₦' + (data.outstandingLiabilities / 1e6 || 0).toFixed(1) + 'M';
+    document.getElementById('admin-stat-reg').textContent = registeredCount;
+    document.getElementById('admin-stat-paid').textContent = '₦' + (totalPaid / 1e6 || 0).toFixed(1) + 'M';
+    document.getElementById('admin-stat-out').textContent = '₦' + (outstandingLiabilities / 1e6 || 0).toFixed(1) + 'M';
 
     // Defaulters Table
     const defTbody = document.getElementById('admin-defaulters-list');
-    if (data.debtorProfiles.length === 0) {
+    if (overduePayments.length === 0) {
       defTbody.innerHTML = '<div style="padding:1.5rem;text-align:center;">No defaulters found.</div>';
     } else {
-      defTbody.innerHTML = data.debtorProfiles.map(dp => `
+      defTbody.innerHTML = overduePayments.map(dp => `
         <div class="status-table-row row-warn">
           <span>${dp.user?.bizName || 'Unknown'}</span>
           <span>${dp.user?.tin || 'Unknown'}</span>
@@ -500,14 +588,14 @@ async function loadAdminDashboard() {
 
     // Enterprises Table
     const entTbody = document.getElementById('admin-enterprise-list');
-    if (data.registeredEnterprises.length === 0) {
+    if (nonAdminUsers.length === 0) {
       entTbody.innerHTML = '<div style="padding:1.5rem;text-align:center;">No enterprises registered.</div>';
     } else {
-      entTbody.innerHTML = data.registeredEnterprises.map(e => `
+      entTbody.innerHTML = nonAdminUsers.map(e => `
         <div class="status-table-row">
           <span>${e.bizName}</span>
           <span>${e.tin}</span>
-          <span>${e.type}</span>
+          <span>${e.entityType}</span>
           <span>${e.location || 'N/A'}</span>
           <span class="status-pill ${e.status === 'active' ? 'pill-green' : 'pill-amber'}">${e.status}</span>
         </div>
@@ -516,14 +604,14 @@ async function loadAdminDashboard() {
 
     // Feedback List
     const fbList = document.getElementById('admin-feedback-list');
-    if (data.feedbacks.length === 0) {
+    if (feedbacks.length === 0) {
       fbList.innerHTML = '<div style="padding:1.5rem;text-align:center;">No feedbacks submitted.</div>';
     } else {
-      fbList.innerHTML = data.feedbacks.map(f => {
+      fbList.innerHTML = feedbacks.map(f => {
         const stars = '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating);
         return `<div style="border:1px solid rgba(0,0,0,0.1); border-radius:8px; padding:1rem;">
           <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
-            <strong>${f.userId ? f.userId.bizName : f.entityName}</strong>
+            <strong>${f.userName}</strong>
             <span style="color:var(--amber)">${stars}</span>
           </div>
           <p style="color:var(--text-muted);font-size:14px;">"${f.comment || 'No comment provided'}"</p>
@@ -533,11 +621,9 @@ async function loadAdminDashboard() {
     }
 
     // Render Charts
-    buildAdminCharts(data);
+    buildAdminCharts({ monthlyAnalytics: monthlyData, entityBreakdown });
 
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
+  }, 400);
 }
 
 function buildAdminCharts(data) {
@@ -582,7 +668,7 @@ function buildAdminCharts(data) {
     });
   }
 
-  // Trend Chart (dummy trend for demo as required, or real if we had 12 month data)
+  // Trend Chart (dummy trend for demo)
   const trendCtx = document.getElementById('adminTrendChart');
   if (trendCtx) {
     if (window.adminTrendChart) window.adminTrendChart.destroy();
@@ -602,6 +688,9 @@ function buildAdminCharts(data) {
   }
 }
 
+// ==========================================
+// UTILS
+// ==========================================
 function showToast(msg, type = 'info') {
   let container = document.getElementById('toast-container');
   if (!container) {
@@ -627,6 +716,7 @@ function showError(el, msg) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initLocalDB(); // Setup admin and tables if missing
   loadSession();
   updateNavForAuth();
   showSection('home');
