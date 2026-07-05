@@ -4,7 +4,10 @@
 // LOCAL STORAGE DATABASE SIMULATION
 // ==========================================
 function initLocalDB() {
-  if (!localStorage.getItem('utaps_users')) {
+  const users = JSON.parse(localStorage.getItem('utaps_users') || '[]');
+  const hasDemo = users.some(u => u.email === 'demo@gmail.com');
+
+  if (!localStorage.getItem('utaps_users') || !hasDemo) {
     const adminUser = {
       _id: 'admin_123',
       tin: 'ADMIN-001',
@@ -20,10 +23,115 @@ function initLocalDB() {
       status: 'active',
       createdAt: new Date().toISOString()
     };
-    localStorage.setItem('utaps_users', JSON.stringify([adminUser]));
-    localStorage.setItem('utaps_payments', JSON.stringify([]));
-    localStorage.setItem('utaps_feedbacks', JSON.stringify([]));
-    localStorage.setItem('utaps_notices', JSON.stringify([]));
+
+    const demoUser = {
+      _id: 'demo_123',
+      tin: 'DEMO-888',
+      bizName: 'Demo Metropolis Plaza Ltd',
+      entityType: 'Shopping Plaza',
+      address: 'Aba Road, Umuahia Metropolis',
+      location: 'Aba Road',
+      email: 'demo@gmail.com',
+      phone: '08034567890',
+      role: 'user',
+      password: 'demo1234',
+      utapsId: 'UTAPS-2026-DEMO',
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
+
+    // Replace or seed users
+    const newUsers = users.filter(u => u.email !== 'admin@gmail.com' && u.email !== 'demo@gmail.com');
+    newUsers.push(adminUser, demoUser);
+    localStorage.setItem('utaps_users', JSON.stringify(newUsers));
+
+    // Preload mock history for demo user
+    const payments = JSON.parse(localStorage.getItem('utaps_payments') || '[]');
+    const filteredPayments = payments.filter(p => p.userId !== 'demo_123');
+    const demoPayments = [
+      {
+        _id: 'pay_d1',
+        userId: 'demo_123',
+        taxType: 'Corporate Income Tax Return',
+        period: '2025',
+        amount: 850000,
+        assessmentRef: 'CIT-2025-0012',
+        method: 'Bank Transfer',
+        status: 'paid',
+        paidAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        receiptNo: 'UTAPS-REC-20260501-0001'
+      },
+      {
+        _id: 'pay_d2',
+        userId: 'demo_123',
+        taxType: 'PAYE Remittance Schedule',
+        period: '2026 Q1',
+        amount: 320000,
+        assessmentRef: 'PAYE-2026Q1-039',
+        method: 'Card Payment',
+        status: 'paid',
+        paidAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        receiptNo: 'UTAPS-REC-20260515-0002'
+      },
+      {
+        _id: 'pay_d3',
+        userId: 'demo_123',
+        taxType: 'PAYE Remittance Schedule',
+        period: '2026 Q2',
+        amount: 320000,
+        assessmentRef: 'PAYE-2026Q2-088',
+        method: 'Bank Transfer',
+        status: 'overdue',
+        dueDate: '2026-06-30'
+      },
+      {
+        _id: 'pay_d4',
+        userId: 'demo_123',
+        taxType: 'Business Premises Levy',
+        period: '2026',
+        amount: 75000,
+        assessmentRef: 'BPL-2026-991',
+        method: 'Bank Transfer',
+        status: 'due',
+        dueDate: '2026-07-31'
+      }
+    ];
+    localStorage.setItem('utaps_payments', JSON.stringify([...filteredPayments, ...demoPayments]));
+
+    const notices = JSON.parse(localStorage.getItem('utaps_notices') || '[]');
+    const filteredNotices = notices.filter(n => n.userId !== 'demo_123');
+    const demoNotices = [
+      {
+        _id: 'notice_d1',
+        userId: 'demo_123',
+        type: 'Penalty',
+        title: 'PAYE Remittance Penalty Warning',
+        body: 'Your PAYE Remittance for Q2 2026 is overdue as of 30 June 2026. A 10% monthly compounding interest penalty applies on the outstanding balance of ₦320,000.',
+        issuedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        noticeRef: 'UTAPS/2026/PEN/00412'
+      }
+    ];
+    localStorage.setItem('utaps_notices', JSON.stringify([...filteredNotices, ...demoNotices]));
+
+    const feedbacks = JSON.parse(localStorage.getItem('utaps_feedbacks') || '[]');
+    const filteredFeedbacks = feedbacks.filter(f => f.userId !== 'demo_123');
+    const demoFeedbacks = [
+      {
+        _id: 'fb_d1',
+        userId: 'demo_123',
+        userName: 'Demo Metropolis Plaza Ltd',
+        entityType: 'Shopping Plaza',
+        category: 'Usability',
+        rating: 5,
+        easeRating: 5,
+        speedRating: 4,
+        supportRating: 5,
+        deadlineRating: 4,
+        comment: 'Excellent interface! TCC application is very smooth. Please continue supporting local merchants.',
+        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    ];
+    localStorage.setItem('utaps_feedbacks', JSON.stringify([...filteredFeedbacks, ...demoFeedbacks]));
   }
 }
 
@@ -40,12 +148,35 @@ function generateId() {
 }
 
 // ==========================================
+// THEME SWITCHER LOGIC
+// ==========================================
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light-mode');
+  localStorage.setItem('utaps_theme', isLight ? 'light' : 'dark');
+  updateThemeIcons(isLight);
+}
+
+function updateThemeIcons(isLight) {
+  const icon = document.getElementById('theme-icon');
+  const iconMobile = document.getElementById('theme-icon-mobile');
+  const iconClass = isLight ? 'ti ti-moon' : 'ti ti-sun';
+  if (icon) icon.className = iconClass;
+  if (iconMobile) iconMobile.className = iconClass;
+}
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('utaps_theme');
+  const isLight = savedTheme === 'light';
+  document.documentElement.classList.toggle('light-mode', isLight);
+  updateThemeIcons(isLight);
+}
+
+// ==========================================
 // SESSION MANAGEMENT
 // ==========================================
 let currentUser = null;
 function isLoggedIn() { return !!localStorage.getItem('utaps_token'); }
 function saveSession(user) {
-  // We use a fake token since this is pure client-side
   localStorage.setItem('utaps_token', 'fake-jwt-token-' + user._id);
   localStorage.setItem('utaps_user', JSON.stringify(user));
   currentUser = user;
@@ -173,6 +304,8 @@ function toggleMobileNav() {
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
+let cachedAdminData = null;
+
 function switchTab(el, id) {
   const tabsEl = el.closest('.tabs');
   if (!tabsEl) return;
@@ -182,6 +315,13 @@ function switchTab(el, id) {
   document.querySelectorAll(`[id^="${prefix}"]`).forEach(p => { p.hidden = true; p.classList.remove('active'); });
   const target = document.getElementById(id);
   if (target) { target.hidden = false; target.classList.add('active'); }
+
+  // Re-draw admin dashboard charts when the tab becomes visible
+  if (id === 'admin4' && cachedAdminData) {
+    setTimeout(() => {
+      buildAdminCharts(cachedAdminData);
+    }, 50);
+  }
 }
 
 function handleCard(event, section) {
@@ -214,7 +354,7 @@ async function handleLogin() {
       showError(errEl, 'Invalid credentials.');
     }
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-login"></i> Sign in'; }
-  }, 500); // Simulate network delay
+  }, 500);
 }
 
 function togglePassword(inputId, btn) {
@@ -397,7 +537,6 @@ async function loadStatusReport() {
   const loading = document.getElementById('status-loading');
   const tin = input?.value?.trim();
   if (!tin) { showToast('Please enter a TIN or business name.', 'error'); return; }
-  // Not fully implemented for non-logged-in in demo, default to loadMyStatus for simplicity
   loadMyStatus();
 }
 
@@ -598,6 +737,9 @@ async function loadAdminDashboard() {
       entityBreakdown[u.entityType] = (entityBreakdown[u.entityType] || 0) + 1;
     });
 
+    // Cache the data for re-drawing charts on tab active state
+    cachedAdminData = { monthlyAnalytics: monthlyData, entityBreakdown };
+
     // Summary Cards
     document.getElementById('admin-stat-reg').textContent = registeredCount;
     document.getElementById('admin-stat-paid').textContent = '₦' + (totalPaid / 1e6 || 0).toFixed(1) + 'M';
@@ -643,19 +785,22 @@ async function loadAdminDashboard() {
     } else {
       fbList.innerHTML = feedbacks.map(f => {
         const stars = '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating);
-        return `<div style="border:1px solid rgba(0,0,0,0.1); border-radius:8px; padding:1rem;">
+        return `<div style="border:1px solid var(--border); border-radius:8px; padding:1rem; background: rgba(255,255,255,0.02)">
           <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
             <strong>${f.userName}</strong>
-            <span style="color:var(--amber)">${stars}</span>
+            <span style="color:var(--gold)">${stars}</span>
           </div>
           <p style="color:var(--text-muted);font-size:14px;">"${f.comment || 'No comment provided'}"</p>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:0.5rem;">${new Date(f.createdAt).toLocaleString()} | Category: ${f.category}</div>
+          <div style="font-size:12px;color:var(--text-faint);margin-top:0.5rem;">${new Date(f.createdAt).toLocaleString()} | Category: ${f.category}</div>
         </div>`;
       }).join('');
     }
 
-    // Render Charts
-    buildAdminCharts({ monthlyAnalytics: monthlyData, entityBreakdown });
+    // Draw the charts if the active tab is already the Analytics tab
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab && activeTab.textContent.trim() === 'Analytics & Trends') {
+      buildAdminCharts(cachedAdminData);
+    }
 
   }, 400);
 }
@@ -663,10 +808,22 @@ async function loadAdminDashboard() {
 function buildAdminCharts(data) {
   if (typeof Chart === 'undefined') return;
 
-  const BASE  = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} };
+  const isLight = document.documentElement.classList.contains('light-mode');
+  const textColor = isLight ? '#475569' : '#9ca3af';
+  const gridColor = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.05)';
+
+  const BASE  = { 
+    responsive:true, 
+    maintainAspectRatio:false, 
+    plugins:{
+      legend:{
+        display:false
+      }
+    } 
+  };
   const NAIRA = v => '₦' + v + 'M';
 
-  // Monthly Revenue Chart
+  // Monthly Revenue Chart (Bar)
   const revCtx = document.getElementById('adminRevenueChart');
   if (revCtx) {
     if (window.adminRevChart) window.adminRevChart.destroy();
@@ -677,15 +834,27 @@ function buildAdminCharts(data) {
         datasets: [{
           label: 'Revenue',
           data: [data.monthlyAnalytics.Jan||0, data.monthlyAnalytics.Feb||0, data.monthlyAnalytics.Mar||0, data.monthlyAnalytics.Apr||0, data.monthlyAnalytics.May||0, data.monthlyAnalytics.Jun||0].map(v => v/1e6),
-          backgroundColor: '#3266ad',
+          backgroundColor: '#6366f1',
           borderRadius: 4
         }]
       },
-      options: {...BASE, scales: { y: { ticks: { callback: NAIRA } } } }
+      options: {
+        ...BASE, 
+        scales: { 
+          y: { 
+            ticks: { color: textColor, callback: NAIRA },
+            grid: { color: gridColor }
+          },
+          x: {
+            ticks: { color: textColor },
+            grid: { display: false }
+          }
+        } 
+      }
     });
   }
 
-  // Pie Chart (Entity breakdown)
+  // Pie Chart (Entity breakdown - Doughnut)
   const pieCtx = document.getElementById('adminPieChart');
   if (pieCtx) {
     if (window.adminPieChart) window.adminPieChart.destroy();
@@ -695,14 +864,26 @@ function buildAdminCharts(data) {
         labels: Object.keys(data.entityBreakdown),
         datasets: [{
           data: Object.values(data.entityBreakdown),
-          backgroundColor: ['#0a2d5e','#3266ad','#85b7eb','#b5d4f4','#d8e9f8']
+          backgroundColor: ['#6366f1','#10b981','#fbbf24','#ef4444','#a855f7','#14b8a6'],
+          borderWidth: isLight ? 2 : 0,
+          borderColor: isLight ? '#ffffff' : 'transparent'
         }]
       },
-      options: {...BASE, cutout: '60%'}
+      options: {
+        ...BASE, 
+        cutout: '65%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'right',
+            labels: { color: textColor, font: { family: 'Outfit' } }
+          }
+        }
+      }
     });
   }
 
-  // Trend Chart (dummy trend for demo)
+  // Trend Chart (Trend Line)
   const trendCtx = document.getElementById('adminTrendChart');
   if (trendCtx) {
     if (window.adminTrendChart) window.adminTrendChart.destroy();
@@ -713,11 +894,28 @@ function buildAdminCharts(data) {
         datasets: [{
           label: 'Collection Trend',
           data: [110,115,118,122,130,125,118,124,139,148,152,163],
-          borderColor: '#0a2d5e', backgroundColor: 'rgba(10,45,94,.07)',
-          fill: true, tension: 0.3
+          borderColor: '#10b981', 
+          backgroundColor: 'rgba(16,185,129,0.06)',
+          fill: true, 
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#10b981'
         }]
       },
-      options: {...BASE, scales: { y: { ticks: { callback: NAIRA } } } }
+      options: {
+        ...BASE, 
+        scales: { 
+          y: { 
+            ticks: { color: textColor, callback: NAIRA },
+            grid: { color: gridColor }
+          },
+          x: {
+            ticks: { color: textColor },
+            grid: { display: false }
+          }
+        } 
+      }
     });
   }
 }
@@ -734,9 +932,16 @@ function showToast(msg, type = 'info') {
     document.body.appendChild(container);
   }
   const toast = document.createElement('div');
+  const isLight = document.documentElement.classList.contains('light-mode');
   const colors = { success:'#065f46', error:'#9f1239', info:'#1e3a5f' };
   const bg     = { success:'#ecfdf5', error:'#fff1f2', info:'#e6f1fb' };
-  toast.style.cssText = `background:${bg[type]||bg.info};color:${colors[type]||colors.info};border:1px solid currentColor;padding:12px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);line-height:1.5;word-break:break-word;opacity:0;transition:opacity .2s`;
+  
+  // Custom theme colors for light/dark modes
+  const style = isLight 
+    ? `background:${bg[type]||bg.info};color:${colors[type]||colors.info};border:1px solid currentColor;`
+    : `background:#111622;color:${type === 'success' ? '#34d399' : type === 'error' ? '#f87171' : '#818cf8'};border:1px solid rgba(255,255,255,0.08);`;
+
+  toast.style.cssText = style + 'padding:12px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);line-height:1.5;word-break:break-word;opacity:0;transition:opacity .2s';
   toast.textContent = msg;
   container.appendChild(toast);
   requestAnimationFrame(() => { toast.style.opacity = '1'; });
@@ -750,7 +955,8 @@ function showError(el, msg) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initLocalDB(); // Setup admin and tables if missing
+  initTheme();
+  initLocalDB(); // Setup admin, demo user and tables if missing
   loadSession();
   updateNavForAuth();
   showSection('home');

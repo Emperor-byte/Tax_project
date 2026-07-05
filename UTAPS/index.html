@@ -24,7 +24,7 @@
         <span class="seal-sub">GOV</span>
       </div>
       <div class="logo-text">
-        <span class="logo-name">TaxUmuahia</span>
+        <span class="logo-name">UTAPS</span>
         <span class="logo-full">Umuahia Tax Automation &amp; Payment System</span>
       </div>
     </div>
@@ -49,10 +49,16 @@
         <i class="ti ti-search"></i>
         <input type="search" placeholder="Search UTAPS…" aria-label="Search portal" />
       </div>
+      <button class="btn-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <i class="ti ti-sun" id="theme-icon"></i>
+      </button>
       <button class="btn-nav-login"  onclick="showSection('login')">Sign in</button>
       <button class="btn-nav-signup" onclick="showSection('register')">Register</button>
     </div>
 
+    <button class="btn-theme-toggle mobile-theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+      <i class="ti ti-sun" id="theme-icon-mobile"></i>
+    </button>
     <button class="nav-hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileNav()">
       <i class="ti ti-menu-2"></i>
     </button>
@@ -171,8 +177,8 @@
   <section id="section-login" class="page auth-page">
     <div class="auth-wrap">
       <div class="auth-brand">
-        <div class="auth-logo-mark">UT</div>
-        <span class="auth-brand-name">TaxUmuahia · UTAPS</span>
+        <div class="auth-logo-mark">UTAPS</div>
+        <span class="auth-brand-name">UTAPS Portal</span>
       </div>
       <div class="auth-card">
         <h1 class="auth-title">Sign in to UTAPS</h1>
@@ -213,8 +219,8 @@
   <section id="section-register" class="page auth-page">
     <div class="auth-wrap auth-wrap-wide">
       <div class="auth-brand">
-        <div class="auth-logo-mark">UT</div>
-        <span class="auth-brand-name">TaxUmuahia · UTAPS</span>
+        <div class="auth-logo-mark">UTAPS</div>
+        <span class="auth-brand-name">UTAPS Portal</span>
       </div>
       <div class="auth-card">
         <h1 class="auth-title">Create your UTAPS account</h1>
@@ -926,7 +932,7 @@
 <footer class="site-footer" role="contentinfo">
   <div class="footer-inner">
     <div class="footer-brand">
-      <strong>TaxUmuahia — UTAPS</strong>
+      <strong>UTAPS — Umuahia Tax Automation &amp; Payment System</strong>
       <span>Umuahia Tax Automation &amp; Payment System</span>
       <span>Powered by the Abia State Internal Revenue Service (ABSIRS) &bull; Serving Umuahia Metropolis only</span>
     </div>
