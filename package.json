@@ -1,0 +1,35 @@
+{
+  "name": "utaps",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Umuahia Tax Administration & Payment System (UTAPS) - client-side app",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "roots": [
+      "<rootDir>/tests"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/helpers/setup.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/tests/helpers/"
+    ],
+    "transform": {
+      "UTAPS[\\\\/]tax\\.js$": "<rootDir>/tests/helpers/tax-transform.js",
+      "^.+\\.[jt]sx?$": "babel-jest"
+    },
+    "collectCoverageFrom": [
+      "UTAPS/tax.js"
+    ],
+    "coverageDirectory": "coverage"
+  }
+}
