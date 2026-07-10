@@ -598,10 +598,10 @@ function renderStatusReport(data) {
         ? `<button class="btn-tbl" onclick="viewReceipt('${p._id}')">Receipt</button>`
         : `<button class="btn-tbl btn-tbl-pay" onclick="showSection('pay')">Pay now</button>`;
       return `<div class="status-table-row ${p.status !== 'paid' ? 'row-warn' : ''}">
-        <span>${p.taxType}</span>
-        <span>${p.period || '—'}</span>
+        <span>${escapeHtml(p.taxType)}</span>
+        <span>${escapeHtml(p.period || '—')}</span>
         <span>₦${(p.amount||0).toLocaleString('en-NG')}</span>
-        <span>${p.dueDate || p.paidAt?.slice(0,10) || '—'}</span>
+        <span>${escapeHtml(p.dueDate || p.paidAt?.slice(0,10) || '—')}</span>
         <span class="status-pill ${statusClass}">${statusLabel}</span>
         ${action}
       </div>`;
@@ -752,10 +752,10 @@ async function loadAdminDashboard() {
     } else {
       defTbody.innerHTML = overduePayments.map(dp => `
         <div class="status-table-row row-warn">
-          <span>${dp.user?.bizName || 'Unknown'}</span>
-          <span>${dp.user?.tin || 'Unknown'}</span>
-          <span>${dp.payment.taxType}</span>
-          <span>${dp.deadline || 'Past Due'}</span>
+          <span>${escapeHtml(dp.user?.bizName || 'Unknown')}</span>
+          <span>${escapeHtml(dp.user?.tin || 'Unknown')}</span>
+          <span>${escapeHtml(dp.payment.taxType)}</span>
+          <span>${escapeHtml(dp.deadline || 'Past Due')}</span>
           <span style="color:#dc2626;font-weight:bold;">₦${(dp.payment.amount||0).toLocaleString()}</span>
           <span class="status-pill pill-red">Overdue</span>
         </div>
@@ -769,11 +769,11 @@ async function loadAdminDashboard() {
     } else {
       entTbody.innerHTML = nonAdminUsers.map(e => `
         <div class="status-table-row">
-          <span>${e.bizName}</span>
-          <span>${e.tin}</span>
-          <span>${e.entityType}</span>
-          <span>${e.location || 'N/A'}</span>
-          <span class="status-pill ${e.status === 'active' ? 'pill-green' : 'pill-amber'}">${e.status}</span>
+          <span>${escapeHtml(e.bizName)}</span>
+          <span>${escapeHtml(e.tin)}</span>
+          <span>${escapeHtml(e.entityType)}</span>
+          <span>${escapeHtml(e.location || 'N/A')}</span>
+          <span class="status-pill ${e.status === 'active' ? 'pill-green' : 'pill-amber'}">${escapeHtml(e.status)}</span>
         </div>
       `).join('');
     }
@@ -787,11 +787,11 @@ async function loadAdminDashboard() {
         const stars = '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating);
         return `<div style="border:1px solid var(--border); border-radius:8px; padding:1rem; background: rgba(255,255,255,0.02)">
           <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
-            <strong>${f.userName}</strong>
+            <strong>${escapeHtml(f.userName)}</strong>
             <span style="color:var(--gold)">${stars}</span>
           </div>
-          <p style="color:var(--text-muted);font-size:14px;">"${f.comment || 'No comment provided'}"</p>
-          <div style="font-size:12px;color:var(--text-faint);margin-top:0.5rem;">${new Date(f.createdAt).toLocaleString()} | Category: ${f.category}</div>
+          <p style="color:var(--text-muted);font-size:14px;">"${escapeHtml(f.comment || 'No comment provided')}"</p>
+          <div style="font-size:12px;color:var(--text-faint);margin-top:0.5rem;">${new Date(f.createdAt).toLocaleString()} | Category: ${escapeHtml(f.category)}</div>
         </div>`;
       }).join('');
     }
@@ -923,6 +923,16 @@ function buildAdminCharts(data) {
 // ==========================================
 // UTILS
 // ==========================================
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function showToast(msg, type = 'info') {
   let container = document.getElementById('toast-container');
   if (!container) {
