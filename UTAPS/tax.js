@@ -4,7 +4,7 @@
 // LOCAL STORAGE DATABASE SIMULATION
 // ==========================================
 function initLocalDB() {
-  const users = JSON.parse(localStorage.getItem('utaps_users') || '[]');
+  const users = getTable('utaps_users');
   const hasDemo = users.some(u => u.email === 'demo@gmail.com');
 
   if (!localStorage.getItem('utaps_users') || !hasDemo) {
@@ -43,10 +43,10 @@ function initLocalDB() {
     // Replace or seed users
     const newUsers = users.filter(u => u.email !== 'admin@gmail.com' && u.email !== 'demo@gmail.com');
     newUsers.push(adminUser, demoUser);
-    localStorage.setItem('utaps_users', JSON.stringify(newUsers));
+    saveTable('utaps_users', newUsers);
 
     // Preload mock history for demo user
-    const payments = JSON.parse(localStorage.getItem('utaps_payments') || '[]');
+    const payments = getTable('utaps_payments');
     const filteredPayments = payments.filter(p => p.userId !== 'demo_123');
     const demoPayments = [
       {
@@ -96,9 +96,9 @@ function initLocalDB() {
         dueDate: '2026-07-31'
       }
     ];
-    localStorage.setItem('utaps_payments', JSON.stringify([...filteredPayments, ...demoPayments]));
+    saveTable('utaps_payments', [...filteredPayments, ...demoPayments]);
 
-    const notices = JSON.parse(localStorage.getItem('utaps_notices') || '[]');
+    const notices = getTable('utaps_notices');
     const filteredNotices = notices.filter(n => n.userId !== 'demo_123');
     const demoNotices = [
       {
@@ -111,9 +111,9 @@ function initLocalDB() {
         noticeRef: 'UTAPS/2026/PEN/00412'
       }
     ];
-    localStorage.setItem('utaps_notices', JSON.stringify([...filteredNotices, ...demoNotices]));
+    saveTable('utaps_notices', [...filteredNotices, ...demoNotices]);
 
-    const feedbacks = JSON.parse(localStorage.getItem('utaps_feedbacks') || '[]');
+    const feedbacks = getTable('utaps_feedbacks');
     const filteredFeedbacks = feedbacks.filter(f => f.userId !== 'demo_123');
     const demoFeedbacks = [
       {
@@ -131,16 +131,30 @@ function initLocalDB() {
         createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
       }
     ];
-    localStorage.setItem('utaps_feedbacks', JSON.stringify([...filteredFeedbacks, ...demoFeedbacks]));
+    saveTable('utaps_feedbacks', [...filteredFeedbacks, ...demoFeedbacks]);
   }
 }
 
 function getTable(name) {
-  return JSON.parse(localStorage.getItem(name) || '[]');
+  const raw = localStorage.getItem(name);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error(`UTAPS: could not parse "${name}" from localStorage; treating it as empty.`, err);
+    return [];
+  }
 }
 
 function saveTable(name, data) {
-  localStorage.setItem(name, JSON.stringify(data));
+  try {
+    localStorage.setItem(name, JSON.stringify(data));
+  } catch (err) {
+    console.error(`UTAPS: failed to save "${name}" to localStorage.`, err);
+    showToast('Unable to save data — your browser storage may be full or disabled.', 'error');
+    throw err;
+  }
 }
 
 function generateId() {
@@ -177,8 +191,14 @@ function initTheme() {
 let currentUser = null;
 function isLoggedIn() { return !!localStorage.getItem('utaps_token'); }
 function saveSession(user) {
-  localStorage.setItem('utaps_token', 'fake-jwt-token-' + user._id);
-  localStorage.setItem('utaps_user', JSON.stringify(user));
+  try {
+    localStorage.setItem('utaps_token', 'fake-jwt-token-' + user._id);
+    localStorage.setItem('utaps_user', JSON.stringify(user));
+  } catch (err) {
+    console.error('UTAPS: failed to persist session.', err);
+    showToast('Unable to save your session — browser storage may be full or disabled.', 'error');
+    throw err;
+  }
   currentUser = user;
 }
 function clearSession() {
@@ -189,7 +209,12 @@ function clearSession() {
 function loadSession() {
   const stored = localStorage.getItem('utaps_user');
   if (stored) {
-    try { currentUser = JSON.parse(stored); } catch { clearSession(); }
+    try {
+      currentUser = JSON.parse(stored);
+    } catch (err) {
+      console.error('UTAPS: corrupted session data; clearing session.', err);
+      clearSession();
+    }
   }
 }
 
@@ -342,18 +367,27 @@ async function handleLogin() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Signing in…'; }
 
   setTimeout(() => {
-    const users = getTable('utaps_users');
-    const user = users.find(u => (u.tin.toLowerCase() === tin || u.email.toLowerCase() === tin) && u.password === pass);
+    try {
+      const users = getTable('utaps_users');
+      const user = users.find(u =>
+        ((u.tin && u.tin.toLowerCase() === tin) || (u.email && u.email.toLowerCase() === tin)) &&
+        u.password === pass
+      );
 
-    if (user) {
-      saveSession(user);
-      updateNavForAuth();
-      showToast(`Welcome back, ${user.contactPerson || user.bizName}!`, 'success');
-      showSection(currentUser.role === 'admin' ? 'analytics' : 'home');
-    } else {
-      showError(errEl, 'Invalid credentials.');
+      if (user) {
+        saveSession(user);
+        updateNavForAuth();
+        showToast(`Welcome back, ${user.contactPerson || user.bizName}!`, 'success');
+        showSection(currentUser.role === 'admin' ? 'analytics' : 'home');
+      } else {
+        showError(errEl, 'Invalid credentials.');
+      }
+    } catch (err) {
+      console.error('UTAPS: sign-in failed.', err);
+      showError(errEl, 'Something went wrong while signing in. Please try again.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-login"></i> Sign in'; }
     }
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-login"></i> Sign in'; }
   }, 500);
 }
 
@@ -430,10 +464,10 @@ async function handleRegister() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Submitting…'; }
 
   setTimeout(() => {
+   try {
     const users = getTable('utaps_users');
-    if (users.some(u => u.tin === tin || u.email.toLowerCase() === email)) {
+    if (users.some(u => u.tin === tin || (u.email && u.email.toLowerCase() === email))) {
       showToast('An account with this TIN or email already exists.', 'error');
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Submit registration'; }
       return;
     }
 
@@ -468,8 +502,12 @@ async function handleRegister() {
       successEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
     }
     setTimeout(() => { showSection('home'); showToast('Welcome to UTAPS!', 'success'); }, 2000);
-    
+   } catch (err) {
+    console.error('UTAPS: registration failed.', err);
+    showToast('Registration could not be completed. Please try again.', 'error');
+   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Submit registration'; }
+   }
   }, 500);
 }
 
@@ -512,23 +550,28 @@ async function submitPayment() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Processing…'; }
 
   setTimeout(() => {
-    const payments = getTable('utaps_payments');
-    const receiptNo = `UTAPS-REC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(payments.length+1).padStart(4,'0')}`;
-    
-    const newPayment = {
-      _id: generateId(),
-      userId: currentUser._id,
-      taxType, period: year, amount: parseFloat(amount), assessmentRef: ref,
-      method, status: 'paid', paidAt: new Date().toISOString(), receiptNo
-    };
+    try {
+      const payments = getTable('utaps_payments');
+      const receiptNo = `UTAPS-REC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(payments.length+1).padStart(4,'0')}`;
 
-    payments.push(newPayment);
-    saveTable('utaps_payments', payments);
+      const newPayment = {
+        _id: generateId(),
+        userId: currentUser._id,
+        taxType, period: year, amount: parseFloat(amount), assessmentRef: ref,
+        method, status: 'paid', paidAt: new Date().toISOString(), receiptNo
+      };
 
-    showToast(`✅ Payment recorded successfully. Receipt: ${receiptNo}`, 'success');
-    if (isLoggedIn()) loadMyStatus();
-    
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-lock"></i> Proceed to payment'; }
+      payments.push(newPayment);
+      saveTable('utaps_payments', payments);
+
+      showToast(`✅ Payment recorded successfully. Receipt: ${receiptNo}`, 'success');
+      if (isLoggedIn()) loadMyStatus();
+    } catch (err) {
+      console.error('UTAPS: payment could not be recorded.', err);
+      showToast('Payment could not be recorded. Please try again.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-lock"></i> Proceed to payment'; }
+    }
   }, 800);
 }
 
@@ -547,27 +590,33 @@ async function loadMyStatus() {
   if (loading) loading.hidden = false;
 
   setTimeout(() => {
-    const payments = getTable('utaps_payments').filter(p => p.userId === currentUser._id);
-    const notices = getTable('utaps_notices').filter(n => n.userId === currentUser._id);
-    
-    const overdue = payments.filter(p => p.status === 'overdue');
-    const due = payments.filter(p => p.status === 'due');
+    try {
+      const payments = getTable('utaps_payments').filter(p => p.userId === currentUser._id);
+      const notices = getTable('utaps_notices').filter(n => n.userId === currentUser._id);
 
-    const summary = {
-      totalPaid: payments.filter(p => p.status === 'paid').reduce((s,p) => s + p.amount, 0),
-      totalOutstanding: [...overdue, ...due].reduce((s,p) => s + p.amount, 0),
-      overdueCount: overdue.length, dueCount: due.length
-    };
+      const overdue = payments.filter(p => p.status === 'overdue');
+      const due = payments.filter(p => p.status === 'due');
 
-    const data = {
-      entity: currentUser,
-      overallStatus: overdue.length === 0 ? 'Compliant' : 'Non-Compliant',
-      payments, notices, summary
-    };
+      const summary = {
+        totalPaid: payments.filter(p => p.status === 'paid').reduce((s,p) => s + p.amount, 0),
+        totalOutstanding: [...overdue, ...due].reduce((s,p) => s + p.amount, 0),
+        overdueCount: overdue.length, dueCount: due.length
+      };
 
-    renderStatusReport(data);
-    if (report) report.hidden = false;
-    if (loading) loading.hidden = true;
+      const data = {
+        entity: currentUser,
+        overallStatus: overdue.length === 0 ? 'Compliant' : 'Non-Compliant',
+        payments, notices, summary
+      };
+
+      renderStatusReport(data);
+      if (report) report.hidden = false;
+    } catch (err) {
+      console.error('UTAPS: failed to load compliance status.', err);
+      showToast('Could not load your compliance status. Please try again.', 'error');
+    } finally {
+      if (loading) loading.hidden = true;
+    }
   }, 400);
 }
 
@@ -668,6 +717,7 @@ async function submitFeedback() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Submitting…'; }
 
   setTimeout(() => {
+   try {
     const feedbacks = getTable('utaps_feedbacks');
     feedbacks.push({
       _id: generateId(),
@@ -687,7 +737,12 @@ async function submitFeedback() {
     
     if (successEl) { successEl.hidden = false; successEl.innerHTML = `<i class="ti ti-circle-check"></i> Feedback submitted!`; }
     showToast('Feedback submitted!', 'success');
+   } catch (err) {
+    console.error('UTAPS: failed to submit feedback.', err);
+    showToast('Feedback could not be submitted. Please try again.', 'error');
+   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Submit feedback'; }
+   }
   }, 600);
 }
 
@@ -702,6 +757,7 @@ async function loadAdminDashboard() {
   if (!isLoggedIn() || currentUser.role !== 'admin') return;
 
   setTimeout(() => {
+   try {
     const users = getTable('utaps_users');
     const payments = getTable('utaps_payments');
     const feedbacks = getTable('utaps_feedbacks');
@@ -801,7 +857,10 @@ async function loadAdminDashboard() {
     if (activeTab && activeTab.textContent.trim() === 'Analytics & Trends') {
       buildAdminCharts(cachedAdminData);
     }
-
+   } catch (err) {
+    console.error('UTAPS: failed to load the admin dashboard.', err);
+    showToast('Could not load the admin dashboard. Please try again.', 'error');
+   }
   }, 400);
 }
 
@@ -956,7 +1015,11 @@ function showError(el, msg) {
 
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
-  initLocalDB(); // Setup admin, demo user and tables if missing
+  try {
+    initLocalDB(); // Setup admin, demo user and tables if missing
+  } catch (err) {
+    console.error('UTAPS: failed to initialize local database.', err);
+  }
   loadSession();
   updateNavForAuth();
   showSection('home');
