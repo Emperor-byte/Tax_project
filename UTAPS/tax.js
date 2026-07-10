@@ -4,7 +4,7 @@
 // LOCAL STORAGE DATABASE SIMULATION
 // ==========================================
 function initLocalDB() {
-  const users = JSON.parse(localStorage.getItem('utaps_users') || '[]');
+  const users = getTable('utaps_users');
   const hasDemo = users.some(u => u.email === 'demo@gmail.com');
 
   if (!localStorage.getItem('utaps_users') || !hasDemo) {
@@ -40,14 +40,13 @@ function initLocalDB() {
       createdAt: new Date().toISOString()
     };
 
-    // Replace or seed users
-    const newUsers = users.filter(u => u.email !== 'admin@gmail.com' && u.email !== 'demo@gmail.com');
-    newUsers.push(adminUser, demoUser);
-    localStorage.setItem('utaps_users', JSON.stringify(newUsers));
+    replaceTableRows(
+      'utaps_users',
+      user => user.email === 'admin@gmail.com' || user.email === 'demo@gmail.com',
+      [adminUser, demoUser]
+    );
 
     // Preload mock history for demo user
-    const payments = JSON.parse(localStorage.getItem('utaps_payments') || '[]');
-    const filteredPayments = payments.filter(p => p.userId !== 'demo_123');
     const demoPayments = [
       {
         _id: 'pay_d1',
@@ -96,10 +95,8 @@ function initLocalDB() {
         dueDate: '2026-07-31'
       }
     ];
-    localStorage.setItem('utaps_payments', JSON.stringify([...filteredPayments, ...demoPayments]));
+    replaceTableRows('utaps_payments', payment => payment.userId === 'demo_123', demoPayments);
 
-    const notices = JSON.parse(localStorage.getItem('utaps_notices') || '[]');
-    const filteredNotices = notices.filter(n => n.userId !== 'demo_123');
     const demoNotices = [
       {
         _id: 'notice_d1',
@@ -111,10 +108,8 @@ function initLocalDB() {
         noticeRef: 'UTAPS/2026/PEN/00412'
       }
     ];
-    localStorage.setItem('utaps_notices', JSON.stringify([...filteredNotices, ...demoNotices]));
+    replaceTableRows('utaps_notices', notice => notice.userId === 'demo_123', demoNotices);
 
-    const feedbacks = JSON.parse(localStorage.getItem('utaps_feedbacks') || '[]');
-    const filteredFeedbacks = feedbacks.filter(f => f.userId !== 'demo_123');
     const demoFeedbacks = [
       {
         _id: 'fb_d1',
@@ -131,7 +126,7 @@ function initLocalDB() {
         createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
       }
     ];
-    localStorage.setItem('utaps_feedbacks', JSON.stringify([...filteredFeedbacks, ...demoFeedbacks]));
+    replaceTableRows('utaps_feedbacks', feedback => feedback.userId === 'demo_123', demoFeedbacks);
   }
 }
 
@@ -143,8 +138,49 @@ function saveTable(name, data) {
   localStorage.setItem(name, JSON.stringify(data));
 }
 
+function replaceTableRows(name, shouldReplace, replacementRows) {
+  const retainedRows = getTable(name).filter(row => !shouldReplace(row));
+  saveTable(name, [...retainedRows, ...replacementRows]);
+}
+
 function generateId() {
   return Math.random().toString(36).substr(2, 9);
+}
+
+function getFieldValue(id, { trim = false, lowercase = false } = {}) {
+  let value = document.getElementById(id)?.value ?? '';
+  if (trim) value = value.trim();
+  return lowercase ? value.toLowerCase() : value;
+}
+
+function createButtonStateSetter(button, loadingContent, idleContent) {
+  return isLoading => {
+    if (!button) return;
+    button.disabled = isLoading;
+    button.innerHTML = isLoading ? loadingContent : idleContent;
+  };
+}
+
+function formatCurrency(amount, fractionDigits = 0) {
+  return '₦' + (Number(amount) || 0).toLocaleString('en-NG', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits
+  });
+}
+
+function updateRatingStars(stars, value) {
+  stars.forEach((star, index) => {
+    const filled = index < value;
+    star.classList.toggle('filled', filled);
+    const icon = star.querySelector('i');
+    if (icon) icon.className = filled ? 'ti ti-star-filled' : 'ti ti-star';
+  });
+}
+
+function handleActivationKey(event, action) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  action();
 }
 
 // ==========================================
@@ -324,22 +360,23 @@ function switchTab(el, id) {
   }
 }
 
-function handleCard(event, section) {
-  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSection(section); }
-}
-
 // ==========================================
 // AUTH LOGIC
 // ==========================================
 async function handleLogin() {
-  const tin    = document.getElementById('login-tin')?.value?.trim().toLowerCase();
-  const pass   = document.getElementById('login-pass')?.value;
+  const tin    = getFieldValue('login-tin', { trim: true, lowercase: true });
+  const pass   = getFieldValue('login-pass');
   const errEl  = document.getElementById('login-error');
   if (errEl) errEl.hidden = true;
 
   if (!tin || !pass) { showError(errEl, 'Please enter your TIN / email and password.'); return; }
   const btn = document.querySelector('.auth-submit');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Signing in…'; }
+  const setButtonLoading = createButtonStateSetter(
+    btn,
+    '<i class="ti ti-loader-2"></i> Signing in…',
+    '<i class="ti ti-login"></i> Sign in'
+  );
+  setButtonLoading(true);
 
   setTimeout(() => {
     const users = getTable('utaps_users');
@@ -353,7 +390,7 @@ async function handleLogin() {
     } else {
       showError(errEl, 'Invalid credentials.');
     }
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-login"></i> Sign in'; }
+    setButtonLoading(false);
   }, 500);
 }
 
@@ -386,19 +423,19 @@ function regNext(step) {
 
 function validateRegStep(step) {
   if (step === 1) {
-    if (!document.getElementById('reg-bizname')?.value.trim()) { alert('Business name is required.'); return false; }
-    if (!document.getElementById('reg-tin')?.value.trim())     { alert('TIN is required.'); return false; }
-    if (!document.getElementById('reg-entity')?.value)         { alert('Please select an entity type.'); return false; }
-    if (!document.getElementById('reg-location')?.value)       { alert('Please select a location in Umuahia.'); return false; }
-    if (!document.getElementById('reg-address')?.value.trim()) { alert('Business address is required.'); return false; }
+    if (!getFieldValue('reg-bizname', { trim: true })) { alert('Business name is required.'); return false; }
+    if (!getFieldValue('reg-tin', { trim: true }))     { alert('TIN is required.'); return false; }
+    if (!getFieldValue('reg-entity'))                  { alert('Please select an entity type.'); return false; }
+    if (!getFieldValue('reg-location'))                { alert('Please select a location in Umuahia.'); return false; }
+    if (!getFieldValue('reg-address', { trim: true })) { alert('Business address is required.'); return false; }
   }
   if (step === 2) {
-    const email = document.getElementById('reg-email')?.value.trim();
+    const email = getFieldValue('reg-email', { trim: true });
     if (!email) { alert('Gmail address is required.'); return false; }
     if (!email.toLowerCase().endsWith('@gmail.com')) { alert('A Gmail address is required for registration.'); return false; }
-    if (!document.getElementById('reg-phone')?.value.trim())   { alert('Phone number is required.'); return false; }
-    const p = document.getElementById('reg-pass')?.value;
-    const p2 = document.getElementById('reg-pass2')?.value;
+    if (!getFieldValue('reg-phone', { trim: true })) { alert('Phone number is required.'); return false; }
+    const p = getFieldValue('reg-pass');
+    const p2 = getFieldValue('reg-pass2');
     if (!p || p.length < 8) { alert('Password must be at least 8 characters.'); return false; }
     if (p !== p2)            { alert('Passwords do not match.'); return false; }
     if (!document.getElementById('reg-terms')?.checked) { alert('Please accept the Terms of Use.'); return false; }
@@ -408,11 +445,11 @@ function validateRegStep(step) {
 
 function populateConfirmation() {
   const fields = {
-    'conf-entity':  document.getElementById('reg-bizname')?.value,
-    'conf-tin':     document.getElementById('reg-tin')?.value,
-    'conf-addr':    document.getElementById('reg-address')?.value,
-    'conf-contact': document.getElementById('reg-contact')?.value,
-    'conf-email':   document.getElementById('reg-email')?.value
+    'conf-entity':  getFieldValue('reg-bizname'),
+    'conf-tin':     getFieldValue('reg-tin'),
+    'conf-addr':    getFieldValue('reg-address'),
+    'conf-contact': getFieldValue('reg-contact'),
+    'conf-email':   getFieldValue('reg-email')
   };
   Object.entries(fields).forEach(([id,val]) => {
     const el = document.getElementById(id);
@@ -423,35 +460,40 @@ function populateConfirmation() {
 async function handleRegister() {
   const successEl = document.getElementById('reg-success');
   const btn = document.getElementById('reg-submit-btn');
+  const setButtonLoading = createButtonStateSetter(
+    btn,
+    '<i class="ti ti-loader-2"></i> Submitting…',
+    '<i class="ti ti-check"></i> Submit registration'
+  );
 
-  const tin = document.getElementById('reg-tin')?.value?.trim();
-  const email = document.getElementById('reg-email')?.value?.trim().toLowerCase();
+  const tin = getFieldValue('reg-tin', { trim: true });
+  const email = getFieldValue('reg-email', { trim: true, lowercase: true });
 
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Submitting…'; }
+  setButtonLoading(true);
 
   setTimeout(() => {
     const users = getTable('utaps_users');
     if (users.some(u => u.tin === tin || u.email.toLowerCase() === email)) {
       showToast('An account with this TIN or email already exists.', 'error');
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Submit registration'; }
+      setButtonLoading(false);
       return;
     }
 
     const newUser = {
       _id: generateId(),
-      bizName:       document.getElementById('reg-bizname')?.value?.trim(),
+      bizName:       getFieldValue('reg-bizname', { trim: true }),
       tin:           tin,
-      entityType:    document.getElementById('reg-entity')?.value,
-      location:      document.getElementById('reg-location')?.value,
-      rcNumber:      document.getElementById('reg-rc')?.value?.trim(),
-      address:       document.getElementById('reg-address')?.value?.trim(),
-      annualTurnover: parseFloat(document.getElementById('reg-turnover')?.value) || 0,
-      employees:     parseInt(document.getElementById('reg-employees')?.value) || 0,
-      contactPerson: document.getElementById('reg-contact')?.value?.trim(),
+      entityType:    getFieldValue('reg-entity'),
+      location:      getFieldValue('reg-location'),
+      rcNumber:      getFieldValue('reg-rc', { trim: true }),
+      address:       getFieldValue('reg-address', { trim: true }),
+      annualTurnover: parseFloat(getFieldValue('reg-turnover')) || 0,
+      employees:     parseInt(getFieldValue('reg-employees')) || 0,
+      contactPerson: getFieldValue('reg-contact', { trim: true }),
       role:          'user',
       email:         email,
-      phone:         document.getElementById('reg-phone')?.value?.trim(),
-      password:      document.getElementById('reg-pass')?.value,
+      phone:         getFieldValue('reg-phone', { trim: true }),
+      password:      getFieldValue('reg-pass'),
       utapsId:       `UTAPS-2026-${String(users.length + 1).padStart(4,'0')}`,
       status:        'active',
       createdAt:     new Date().toISOString()
@@ -468,8 +510,8 @@ async function handleRegister() {
       successEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
     }
     setTimeout(() => { showSection('home'); showToast('Welcome to UTAPS!', 'success'); }, 2000);
-    
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Submit registration'; }
+
+    setButtonLoading(false);
   }, 500);
 }
 
@@ -487,7 +529,7 @@ function updatePayTotal() {
   if (!display) return;
   if (select?.value && !amount?.value) { if (amount) amount.value = select.value; }
   const raw = parseFloat(amount?.value) || 0;
-  display.textContent = '₦' + raw.toLocaleString('en-NG', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  display.textContent = formatCurrency(raw, 2);
 }
 
 function selectPayMethod(el) {
@@ -500,16 +542,21 @@ function selectPayMethod(el) {
 // ==========================================
 async function submitPayment() {
   if (!isLoggedIn()) { showToast('Please sign in to make a payment.', 'error'); showSection('login'); return; }
-  const taxType = document.getElementById('pay-type')?.value;
-  const amount  = document.getElementById('pay-amount')?.value;
-  const ref     = document.getElementById('pay-ref')?.value;
-  const year    = document.getElementById('pay-year')?.value;
+  const taxType = getFieldValue('pay-type');
+  const amount  = getFieldValue('pay-amount');
+  const ref     = getFieldValue('pay-ref');
+  const year    = getFieldValue('pay-year');
   const method  = document.querySelector('.pay-method.active span')?.textContent || 'Bank transfer';
 
   if (!taxType || !amount) { showToast('Please select a tax type and enter an amount.', 'error'); return; }
 
   const btn = document.getElementById('pay-submit-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Processing…'; }
+  const setButtonLoading = createButtonStateSetter(
+    btn,
+    '<i class="ti ti-loader-2"></i> Processing…',
+    '<i class="ti ti-lock"></i> Proceed to payment'
+  );
+  setButtonLoading(true);
 
   setTimeout(() => {
     const payments = getTable('utaps_payments');
@@ -527,15 +574,13 @@ async function submitPayment() {
 
     showToast(`✅ Payment recorded successfully. Receipt: ${receiptNo}`, 'success');
     if (isLoggedIn()) loadMyStatus();
-    
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-lock"></i> Proceed to payment'; }
+
+    setButtonLoading(false);
   }, 800);
 }
 
 async function loadStatusReport() {
-  const input   = document.getElementById('status-search');
-  const loading = document.getElementById('status-loading');
-  const tin = input?.value?.trim();
+  const tin = getFieldValue('status-search', { trim: true });
   if (!tin) { showToast('Please enter a TIN or business name.', 'error'); return; }
   loadMyStatus();
 }
@@ -586,8 +631,8 @@ function renderStatusReport(data) {
 
   const sPaid = document.getElementById('sec-total-paid');
   const sOut  = document.getElementById('sec-outstanding');
-  if (sPaid) sPaid.textContent = '₦' + (summary.totalPaid || 0).toLocaleString('en-NG');
-  if (sOut)  sOut.textContent  = '₦' + (summary.totalOutstanding || 0).toLocaleString('en-NG');
+  if (sPaid) sPaid.textContent = formatCurrency(summary.totalPaid);
+  if (sOut)  sOut.textContent  = formatCurrency(summary.totalOutstanding);
 
   const tbody = document.getElementById('status-table-body');
   if (tbody && payments) {
@@ -600,7 +645,7 @@ function renderStatusReport(data) {
       return `<div class="status-table-row ${p.status !== 'paid' ? 'row-warn' : ''}">
         <span>${p.taxType}</span>
         <span>${p.period || '—'}</span>
-        <span>₦${(p.amount||0).toLocaleString('en-NG')}</span>
+        <span>${formatCurrency(p.amount)}</span>
         <span>${p.dueDate || p.paidAt?.slice(0,10) || '—'}</span>
         <span class="status-pill ${statusClass}">${statusLabel}</span>
         ${action}
@@ -628,7 +673,7 @@ async function viewReceipt(paymentId) {
   const payments = getTable('utaps_payments');
   const r = payments.find(p => p._id === paymentId);
   if (!r) { showToast('Payment not found.', 'error'); return; }
-  alert(`UTAPS OFFICIAL RECEIPT\n${'─'.repeat(36)}\nReceipt No: ${r.receiptNo}\nUTAPS ID:   ${currentUser.utapsId}\nEntity:     ${currentUser.bizName}\nTIN:        ${currentUser.tin}\nTax type:   ${r.taxType}\nPeriod:     ${r.period}\nAmount:     ₦${r.amount?.toLocaleString('en-NG')}\nMethod:     ${r.method}\nPaid on:    ${r.paidAt?.slice(0,10)}\n${'─'.repeat(36)}\nIssued By: UTAPS | Powered By: ABSIRS`);
+  alert(`UTAPS OFFICIAL RECEIPT\n${'─'.repeat(36)}\nReceipt No: ${r.receiptNo}\nUTAPS ID:   ${currentUser.utapsId}\nEntity:     ${currentUser.bizName}\nTIN:        ${currentUser.tin}\nTax type:   ${r.taxType}\nPeriod:     ${r.period}\nAmount:     ${formatCurrency(r.amount)}\nMethod:     ${r.method}\nPaid on:    ${r.paidAt?.slice(0,10)}\n${'─'.repeat(36)}\nIssued By: UTAPS | Powered By: ABSIRS`);
 }
 
 // ==========================================
@@ -640,11 +685,7 @@ const RATING_LABELS = { 1:'Poor', 2:'Below average', 3:'Average', 4:'Good', 5:'E
 
 function setRating(val) {
   currentRating = val;
-  document.querySelectorAll('#star-rating .star').forEach((star, i) => {
-    star.classList.toggle('filled', i < val);
-    const icon = star.querySelector('i');
-    if (icon) icon.className = i < val ? 'ti ti-star-filled' : 'ti ti-star';
-  });
+  updateRatingStars(document.querySelectorAll('#star-rating .star'), val);
   const label = document.getElementById('rating-label');
   if (label) label.textContent = RATING_LABELS[val] || '';
 }
@@ -653,11 +694,7 @@ function setMiniRating(group, val) {
   miniRatings[group] = val;
   const container = document.querySelector(`.mini-stars[data-group="${group}"]`);
   if (!container) return;
-  container.querySelectorAll('button').forEach((btn, i) => {
-    btn.classList.toggle('filled', i < val);
-    const icon = btn.querySelector('i');
-    if (icon) icon.className = i < val ? 'ti ti-star-filled' : 'ti ti-star';
-  });
+  updateRatingStars(container.querySelectorAll('button'), val);
 }
 
 async function submitFeedback() {
@@ -665,7 +702,12 @@ async function submitFeedback() {
   if (currentRating === 0) { showToast('Please select an overall rating.', 'error'); return; }
 
   const btn = document.getElementById('feedback-submit-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Submitting…'; }
+  const setButtonLoading = createButtonStateSetter(
+    btn,
+    '<i class="ti ti-loader-2"></i> Submitting…',
+    '<i class="ti ti-send"></i> Submit feedback'
+  );
+  setButtonLoading(true);
 
   setTimeout(() => {
     const feedbacks = getTable('utaps_feedbacks');
@@ -687,7 +729,7 @@ async function submitFeedback() {
     
     if (successEl) { successEl.hidden = false; successEl.innerHTML = `<i class="ti ti-circle-check"></i> Feedback submitted!`; }
     showToast('Feedback submitted!', 'success');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Submit feedback'; }
+    setButtonLoading(false);
   }, 600);
 }
 
@@ -742,8 +784,8 @@ async function loadAdminDashboard() {
 
     // Summary Cards
     document.getElementById('admin-stat-reg').textContent = registeredCount;
-    document.getElementById('admin-stat-paid').textContent = '₦' + (totalPaid / 1e6 || 0).toFixed(1) + 'M';
-    document.getElementById('admin-stat-out').textContent = '₦' + (outstandingLiabilities / 1e6 || 0).toFixed(1) + 'M';
+    document.getElementById('admin-stat-paid').textContent = formatCurrency(totalPaid / 1e6, 1) + 'M';
+    document.getElementById('admin-stat-out').textContent = formatCurrency(outstandingLiabilities / 1e6, 1) + 'M';
 
     // Defaulters Table
     const defTbody = document.getElementById('admin-defaulters-list');
@@ -756,7 +798,7 @@ async function loadAdminDashboard() {
           <span>${dp.user?.tin || 'Unknown'}</span>
           <span>${dp.payment.taxType}</span>
           <span>${dp.deadline || 'Past Due'}</span>
-          <span style="color:#dc2626;font-weight:bold;">₦${(dp.payment.amount||0).toLocaleString()}</span>
+          <span style="color:#dc2626;font-weight:bold;">${formatCurrency(dp.payment.amount)}</span>
           <span class="status-pill pill-red">Overdue</span>
         </div>
       `).join('');
@@ -976,14 +1018,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.querySelectorAll('.pay-method').forEach(tile => {
-    tile.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); selectPayMethod(tile); } });
+    tile.addEventListener('keydown', e => handleActivationKey(e, () => selectPayMethod(tile)));
   });
 
   document.querySelectorAll('.entity-card').forEach(card => {
-    card.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); card.click(); } });
+    card.addEventListener('keydown', e => handleActivationKey(e, () => card.click()));
   });
 
   document.querySelectorAll('#star-rating .star').forEach(star => {
-    star.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); setRating(parseInt(star.getAttribute('data-val'),10)); } });
+    star.addEventListener('keydown', e => handleActivationKey(e, () => setRating(parseInt(star.getAttribute('data-val'),10))));
   });
 });
